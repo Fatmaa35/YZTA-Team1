@@ -1,91 +1,272 @@
-# **Takım İsmi**
+# 🌱 YemekhanAI – Üniversite Beslenme ve Sürdürülebilirlik Yönetim Sistemi
 
-Takım 1
-
-# Ürün İle İlgili Bilgiler
-
-## Takım Üyeleri
-
-| Profil | İsim | Rol |
-| :---: | :--- | :--- |
-| <a href="https://github.com/Fatmaa35"><img src="https://github.com/Fatmaa35.png" width="50" style="border-radius: 50%;"></a> | Fatma Kaplan | Scrum Master
-| <a href="https://github.com/mertucan"><img src="https://github.com/mertucan.png" width="50" style="border-radius: 50%;"></a> | Mert Ucan |Product Owner
-| <a href="https://github.com/sudenazkalaycik"><img src="https://github.com/sudenazkalaycik.png" width="50" style="border-radius: 50%;"></a> | Sudenaz Kalaycık| Developer
-| <a href="https://github.com/barisuyumaz"><img src="https://github.com/barisuyumaz.png" width="50" style="border-radius: 50%;"></a> | Barış Uyumaz | Developer |
-| <a href="https://github.com/sevvalozer"><img src="https://github.com/sevvalozer.png" width="50" style="border-radius: 50%;"></a> | Şevval Özer | Developer |
-
-<br>
-
-## Ürün İsmi
-
-Ürün ismi henüz belirlenmemiştir.
-
-## Ürün Açıklaması
-
-Şu anda iki farklı proje fikri araştırılmaktadır.
-
-İlk fikir, hastaların şikayetlerini yapay zekâ ve doğal dil işleme yöntemleriyle analiz ederek aciliyet durumunu belirleyen ve onları en uygun sağlık kuruluşuna yönlendiren bir sağlık sistemi geliştirmektir.
-
-İkinci fikir ise, çiftçilerin konum ve ürün bilgilerini hava durumu verileriyle birleştirerek don, kuraklık gibi risklere karşı erken uyarılar veren akıllı bir tarım platformudur.
-
-Şu aşamada her iki fikir için de veri erişimi, uygulanabilirlik ve minimum uygulanabilir ürün (MVP) kapsamı değerlendirilmektedir. Araştırma yapılarak hangi fikir üzerinden ilerleneceği kararlaştırılacaktır.
-
-## Ürün Özellikleri
-
-Proje fikri kesinleştikten sonra ürün özellikleri detaylandırılacaktır.
-
-Araştırılan fikirler kapsamında değerlendirilen olası özellikler:
-
-- Kullanıcıdan doğal dilde bilgi alma
-- Yapay zekâ destekli analiz ve yönlendirme
-- Konum bazlı veri işleme
-- Risk veya aciliyet durumuna göre öneri üretme
-- Kullanıcıya anlaşılır ve aksiyon odaklı çıktı sunma
-
-## Hedef Kitle
-
-Proje fikri kesinleştikten sonra hedef kitle netleştirilecektir.
-
-Araştırılan fikirler kapsamında değerlendirilen olası hedef kitleler:
-
-- Sağlık hizmetine erişim konusunda yönlendirmeye ihtiyaç duyan kullanıcılar
-- Aciliyet durumunu anlamlandırmak isteyen hastalar
-- Çiftçiler
-- Tarımsal üretim yapan işletmeler
-- Konum ve hava durumu bazlı risk takibine ihtiyaç duyan kullanıcılar
-
-## Product Backlog URL
-
-Backlog bağlantısı proje fikri kesinleştikten sonra eklenecektir.
+> Yapay zeka destekli karar destek sistemi ile üniversite yemekhanelerinde menü planlama, stok yönetimi, öğrenci katılımı ve sürdürülebilirlik analizlerini destekleyen entegre bir platform.
 
 ---
 
-# Sprint 1
+# 📑 Proje Hakkında
 
-- **Sprint Notları**: Sprint 1 kapsamında takım üyeleri ve roller belirlenmiştir. Proje fikri için araştırma süreci başlatılmıştır.
+## 👥 Takım Üyeleri (Takım 1)
 
-- **Backlog düzeni ve Story seçimleri**: Ürün fikri henüz kesinleşmediği için backlog oluşturma süreci araştırma sonuçlarına göre tamamlanacaktır.
-
-- **Daily Scrum**: Daily Scrum toplantılarının düzenli olarak yapılması ve toplantı notlarının proje sürecinde paylaşılması planlanmaktadır.
-
-- **Sprint board update**: Sprint board ekran görüntüleri proje yönetim aracı netleştirildikten sonra eklenecektir.
-
-- **Ürün Durumu**: Ürün geliştirme aşamasına henüz başlanmamıştır. Şu anda proje fikri, veri erişimi, uygulanabilirlik ve MVP kapsamı araştırılmaktadır.
-
-- **Sprint Review**:
-Sprint sonunda araştırılan fikirler değerlendirilerek hangi proje fikriyle devam edileceğine karar verilmesi hedeflenmektedir.
-
-- **Sprint Retrospective:**
-  - Takım içi görev dağılımı belirlenmiştir.
-  - Proje fikrinin netleştirilmesi için araştırma yapılmasına karar verilmiştir.
-  - Veri erişimi ve MVP kapsamı karar sürecinde öncelikli kriterler olarak belirlenmiştir.
+| Profil | İsim | Rol | Sorumluluk Alanı |
+| :---: | :--- | :--- | :--- |
+| <a href="https://github.com/mertucan"><img src="https://github.com/mertucan.png" width="50"></a> | **Mert Ucan** | Product Owner | Ürün Yönetimi, Product Backlog ve Önceliklendirme |
+| <a href="https://github.com/Fatmaa35"><img src="https://github.com/Fatmaa35.png" width="50"></a> | **Fatma Kaplan** | Scrum Master | Sprint Planlama, Süreç Yönetimi ve Takım Koordinasyonu |
+| <a href="https://github.com/barisuyumaz"><img src="https://github.com/barisuyumaz.png" width="50"></a> | **Barış Uyumaz** | Backend Developer | FastAPI Backend Geliştirme ve Veritabanı Yönetimi |
+| <a href="https://github.com/sudenazkalaycik"><img src="https://github.com/sudenazkalaycik.png" width="50"></a> | **Sudenaz Kalaycık** | Frontend Developer | React Arayüz Geliştirme ve UI/UX Entegrasyonu |
+| <a href="https://github.com/sevvalozer"><img src="https://github.com/sevvalozer.png" width="50"></a> | **Şevval Özer** | Developer / Data Analyst | Veri Analitiği, Optimizasyon ve Sürdürülebilirlik Analizleri |
 
 ---
 
-# Sprint 2
+# 💡 Ürün Adı
+
+**YemekhanAI**
 
 ---
 
-# Sprint 3
+# 📝 Proje Tanımı
+
+YemekhanAI, üniversite yemekhanelerinin operasyonel süreçlerini veri odaklı yöntemlerle desteklemek amacıyla geliştirilen yapay zeka tabanlı bir karar destek sistemidir.
+
+Proje kapsamında farklı problem alanları değerlendirilmiş; veri erişilebilirliği, uygulanabilirlik ve teknik gerçekleştirilebilirlik kriterleri doğrultusunda kampüs beslenme yönetimi problemi Minimum Viable Product (MVP) olarak belirlenmiştir.
+
+Sistemin temel amacı;
+
+- Yemek menülerinin planlanmasını desteklemek,
+- Malzeme ve stok yönetimini kolaylaştırmak,
+- Öğrenci katılım verilerini analiz ederek israfı azaltmak,
+- Menülerin beslenme değerlerini değerlendirmek,
+- Karbon ayak izi analizleri ile sürdürülebilir karar alma süreçlerine katkı sağlamaktır.
 
 ---
+
+# 🎯 Proje Amaçları
+
+- Üniversite yemekhanelerinde operasyonel verimliliğin artırılması
+- Gıda israfının azaltılması
+- Menü planlamasında veri odaklı kararların desteklenmesi
+- Sağlıklı beslenme kriterlerinin izlenmesi
+- Karbon ayak izinin ölçülmesi ve azaltılmasına yönelik analizlerin sunulması
+
+---
+
+# 🛠️ Kullanılan Teknolojiler
+
+## Frontend
+
+- React.js
+- Vite
+- Axios
+
+## Backend
+
+- FastAPI (Python)
+
+## Veritabanı
+
+- Supabase (PostgreSQL)
+
+## Yapay Zeka
+
+- Google Gemini API
+
+---
+
+# 📦 Proje Modülleri
+
+## 📊 Dashboard
+
+Sistemde yer alan temel operasyonel göstergelerin tek panel üzerinden izlenmesini sağlar.
+
+Bu modülde;
+
+- Günlük aktif öğrenci sayısı
+- Malzeme stok durumu
+- Haftalık özet istatistikler
+- Temel performans göstergeleri
+
+sunulmaktadır.
+
+---
+
+## 🍽️ Menü ve Malzeme Yönetimi
+
+Menülerin ve menülerde kullanılan malzemelerin yönetildiği modüldür.
+
+Başlıca özellikleri:
+
+- Menü oluşturma
+- Menü güncelleme
+- Malzeme yönetimi
+- Stok takibi
+- Tedarik bilgilerinin yönetimi
+
+---
+
+## 👥 Öğrenci ve Devamsızlık Yönetimi
+
+Öğrencilerin yemekhane kullanım verileri kayıt altına alınmaktadır.
+
+Bu veriler ilerleyen aşamalarda;
+
+- Talep tahmini
+- Menü optimizasyonu
+- Gıda israfı analizleri
+
+için kullanılacaktır.
+
+---
+
+## 🩺 Sağlık Analizi
+
+Hazırlanan menülerin beslenme açısından değerlendirilmesini sağlayan modüldür.
+
+Analiz edilen bilgiler;
+
+- Kalori
+- Protein
+- Karbonhidrat
+- Yağ
+- Alerjen bilgileri
+- Genel beslenme uygunluğu
+
+---
+
+## 🌱 Sürdürülebilirlik Analizi
+
+Bu modül menülerin çevresel etkilerini değerlendirmektedir.
+
+Kapsamında;
+
+- Menü karbon ayak izi hesaplama
+- Emisyon kaynaklarının analizi
+- Menü değişikliklerinin karbon etkisinin simülasyonu
+- Sürdürülebilirlik puanı oluşturulması
+
+bulunmaktadır.
+
+---
+
+# 🎯 Hedef Kullanıcılar
+
+- Üniversite yemekhane yöneticileri
+- Satın alma birimleri
+- Üniversite yönetimleri
+- Öğrenciler
+- Akademik ve idari personel
+
+---
+
+# 📋 Product Backlog
+
+Proje kapsamındaki kullanıcı hikâyeleri (User Stories), görevler (Tasks) ve sprint planlamaları Trello üzerinden yürütülmektedir.
+
+**Trello Board**
+
+> (Sprint sonunda bağlantı eklenecektir.)
+
+---
+
+# 🔄 Sprint 1
+
+## Sprint Notları
+
+Sprint 1 kapsamında;
+
+- Takım üyeleri ve görev dağılımları belirlenmiştir.
+- Farklı proje fikirleri değerlendirilmiştir.
+- Veri erişilebilirliği ve uygulanabilirlik analizleri yapılmıştır.
+- Kampüs beslenme yönetimi problemi MVP olarak seçilmiştir.
+- Ürün ismi **YemekhanAI** olarak belirlenmiştir.
+- Sistem mimarisi planlanmıştır.
+- Kullanılacak teknolojiler belirlenmiştir.
+
+---
+
+## Product Backlog Düzeni
+
+Sprint 1 kapsamında kullanıcı hikâyeleri oluşturulmuş ve önceliklendirilmiştir.
+
+Her kullanıcı hikâyesi geliştirme sürecini kolaylaştıracak şekilde görevlere ayrılmış ve Story Point tahminleri doğrultusunda sprint kapsamına alınmıştır.
+
+---
+
+## Daily Scrum
+
+Takım içi günlük iletişim ve ilerleme takibi Slack üzerinden asenkron olarak yürütülmektedir.
+
+Daily Scrum ekran görüntüleri sprint raporunda paylaşılacaktır.
+
+---
+
+## Sprint Board Update
+
+Sprint planlaması ve görev takibi Trello üzerinden yürütülmektedir.
+
+Sprint Board ekran görüntüleri bu bölümde paylaşılacaktır.
+
+---
+
+## Ürün Durumu
+
+Sprint 1 sonunda;
+
+- Sistem mimarisi oluşturulmuştur.
+- Supabase veritabanı tasarlanmıştır.
+- Backend temel yapısı geliştirilmiştir.
+- Frontend proje yapısı oluşturulmuştur.
+- Dashboard modülünün geliştirilmesine başlanmıştır.
+- Menü ve Malzeme Yönetimi modülünün ilk sürümü geliştirilmiştir.
+- Frontend ve Backend entegrasyonunun ilk aşaması tamamlanmıştır.
+- Sürdürülebilirlik modülü için veri modeli ve analiz yaklaşımı planlanmıştır.
+
+---
+
+## Sprint Review
+
+Sprint sonunda gerçekleştirilen değerlendirme toplantısında;
+
+- Sprint hedeflerinin büyük ölçüde tamamlandığı değerlendirilmiştir.
+- Kullanıcı verilerinin yönetimine yönelik ek geliştirmelerin ilerleyen sprintlerde ele alınmasına karar verilmiştir.
+- Geliştirilen modüllerin temel fonksiyon testlerinde kritik seviyede bir hata tespit edilmemiştir.
+- Sprint hedefleri doğrultusunda ikinci sprintte yapay zeka destekli analiz modüllerinin geliştirilmesine başlanması planlanmıştır.
+
+### Katılımcılar
+
+- Fatma Kaplan
+- Mert Ucan
+- Barış Uyumaz
+- Sudenaz Kalaycık
+- Şevval Özer
+
+---
+
+## Sprint Retrospective
+
+Sprint sonunda aşağıdaki kararlar alınmıştır.
+
+- Görev dağılımlarının netleştirilmesine
+- Story Point tahminlerinin daha ayrıntılı yapılmasına
+- Kod kalitesini artırmak amacıyla test süreçlerine daha fazla zaman ayrılmasına
+- Backend ve Frontend entegrasyonunun daha sık test edilmesine
+- Sprint boyunca Trello ve Slack kullanımının düzenli şekilde sürdürülmesine
+
+karar verilmiştir.
+
+---
+
+# 📌 Sprint 2
+
+Sprint 2 süreci tamamlandıktan sonra bu bölüm güncellenecektir.
+
+---
+
+# 📌 Sprint 3
+
+Sprint 3 süreci ve proje teslimine ilişkin bilgiler sprint sonunda eklenecektir.
+
+---
+
+# 📄 Lisans
+
+Bu proje **YZTA Bootcamp 2026** kapsamında eğitim ve geliştirme amacıyla hazırlanmıştır.
