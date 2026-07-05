@@ -10,11 +10,11 @@
 
 | Profil | İsim | Rol |
 | :---: | :--- | :--- |
-| <a href="https://github.com/mertucan"><img src="https://github.com/mertucan.png" width="50"></a> | **Mert Ucan** | Product Owner |
-| <a href="https://github.com/Fatmaa35"><img src="https://github.com/Fatmaa35.png" width="50"></a> | **Fatma Kaplan** | Scrum Master |
-| <a href="https://github.com/barisuyumaz"><img src="https://github.com/barisuyumaz.png" width="50"></a> | **Barış Uyumaz** | Developer |
-| <a href="https://github.com/sudenazkalaycik"><img src="https://github.com/sudenazkalaycik.png" width="50"></a> | **Sudenaz Kalaycık** | Developer |
-| <a href="https://github.com/sevvalozer"><img src="https://github.com/sevvalozer.png" width="50"></a> | **Şevval Özer** | Developer |
+| <a href="https://github.com/Fatmaa35"><img src="https://github.com/Fatmaa35.png" width="50"></a> | **Fatma Kaplan**<br><a href="#"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linkedin/linkedin-original.svg" alt="LinkedIn" width="24"></a> | Scrum Master |
+| <a href="https://github.com/mertucan"><img src="https://github.com/mertucan.png" width="50"></a> | **Mert Uçan**<br><a href="#"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linkedin/linkedin-original.svg" alt="LinkedIn" width="24"></a> | Product Owner |
+| <a href="https://github.com/barisuyumaz"><img src="https://github.com/barisuyumaz.png" width="50"></a> | **Barış Uyumaz**<br><a href="#"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linkedin/linkedin-original.svg" alt="LinkedIn" width="24"></a> | Developer |
+| <a href="https://github.com/sudenazkalaycik"><img src="https://github.com/sudenazkalaycik.png" width="50"></a> | **Sudenaz Kalaycık**<br><a href="#"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linkedin/linkedin-original.svg" alt="LinkedIn" width="24"></a> | Developer |
+| <a href="https://github.com/sevvalozer"><img src="https://github.com/sevvalozer.png" width="50"></a> | **Şevval Özer**<br><a href="#"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linkedin/linkedin-original.svg" alt="LinkedIn" width="24"></a> | Developer |
 
 ---
 
@@ -65,6 +65,8 @@ Sistemin temel amacı;
 ## Veritabanı
 
 - Supabase (PostgreSQL)
+
+![Database Schema Diagram](bootcampFiles/sprintOne/database-schemaDiagram.png)
 
 ## Yapay Zeka
 
@@ -161,7 +163,9 @@ bulunmaktadır.
 
 Proje kapsamındaki kullanıcı hikâyeleri (User Stories), görevler (Tasks), sprint planlamaları ve görev takip süreçleri Trello üzerinden yürütülmektedir.
 
-🔗 **[Sprint 1 Trello Board](https://trello.com/b/xORZurIX/bootcamp1st-sprint)**
+🔗 **[Sprint 1 Trello Board](https://trello.com/invite/b/6a39b01ac7486cd960963d06/ATTI61c96b260ca26974531643958cc5a9d3E8F8A550/bootcamp1st-sprint)**
+
+![Sprint 1 Trello Board](bootcampFiles/sprintOne/boardUpdate/27.png)
 
 ---
 
@@ -191,9 +195,13 @@ Her kullanıcı hikâyesi geliştirme sürecini kolaylaştıracak şekilde göre
 
 ## Daily Scrum
 
-Takım içi günlük iletişim ve ilerleme takibi Slack üzerinden asenkron olarak yürütülmektedir.
+Takım içi günlük iletişim ve ilerleme takibi Slack ve WhatsApp üzerinden asenkron olarak yürütülmektedir.
 
-Daily Scrum ekran görüntüleri sprint raporunda paylaşılacaktır.
+![Daily Scrum Toplantı 1](bootcampFiles/sprintOne/boardUpdate/toplanti1.png)
+
+![Daily Scrum Toplantı 2](bootcampFiles/sprintOne/boardUpdate/toplanti2.jpeg)
+
+![Daily Scrum Toplantı 3](bootcampFiles/sprintOne/boardUpdate/toplanti3.png)
 
 ---
 
@@ -201,7 +209,32 @@ Daily Scrum ekran görüntüleri sprint raporunda paylaşılacaktır.
 
 Sprint planlaması ve görev takibi Trello üzerinden yürütülmektedir.
 
-Sprint Board ekran görüntüleri bu bölümde paylaşılacaktır.
+<details>
+<summary>Güncellemeler</summary>
+
+![Sprint Board Update 2](bootcampFiles/sprintOne/boardUpdate/2.png)
+
+![Sprint Board Update 3](bootcampFiles/sprintOne/boardUpdate/3.png)
+
+![Sprint Board Update 4](bootcampFiles/sprintOne/boardUpdate/4.png)
+
+![Sprint Board Update 5](bootcampFiles/sprintOne/boardUpdate/5.png)
+
+![Sprint Board Update 6](bootcampFiles/sprintOne/boardUpdate/6.png)
+
+![Sprint Board Update 21](bootcampFiles/sprintOne/boardUpdate/21.png)
+
+![Sprint Board Update 22](bootcampFiles/sprintOne/boardUpdate/22.png)
+
+![Sprint Board Update 23](bootcampFiles/sprintOne/screenshots/23.jpeg)
+
+![Sprint Board Update 24](bootcampFiles/sprintOne/boardUpdate/24.png)
+
+![Sprint Board Update 25](bootcampFiles/sprintOne/screenshots/25.jpeg)
+
+![Sprint Board Update 26](bootcampFiles/sprintOne/boardUpdate/26.png)
+
+</details>
 
 ---
 
@@ -232,7 +265,7 @@ Sprint sonunda gerçekleştirilen değerlendirme toplantısında;
 ### Katılımcılar
 
 - Fatma Kaplan
-- Mert Ucan
+- Mert Uçan
 - Barış Uyumaz
 - Sudenaz Kalaycık
 - Şevval Özer
