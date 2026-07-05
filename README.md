@@ -8,13 +8,15 @@
 
 ## 👥 Takım Üyeleri (Takım 1)
 
-| Profil | İsim | Rol | Sorumluluk Alanı |
-| :---: | :--- | :--- | :--- |
-| <a href="https://github.com/mertucan"><img src="https://github.com/mertucan.png" width="50"></a> | **Mert Ucan** | Product Owner | Ürün Yönetimi, Product Backlog ve Önceliklendirme |
-| <a href="https://github.com/Fatmaa35"><img src="https://github.com/Fatmaa35.png" width="50"></a> | **Fatma Kaplan** | Scrum Master | Sprint Planlama, Süreç Yönetimi ve Takım Koordinasyonu |
-| <a href="https://github.com/barisuyumaz"><img src="https://github.com/barisuyumaz.png" width="50"></a> | **Barış Uyumaz** | Backend Developer | FastAPI Backend Geliştirme ve Veritabanı Yönetimi |
-| <a href="https://github.com/sudenazkalaycik"><img src="https://github.com/sudenazkalaycik.png" width="50"></a> | **Sudenaz Kalaycık** | Frontend Developer | React Arayüz Geliştirme ve UI/UX Entegrasyonu |
-| <a href="https://github.com/sevvalozer"><img src="https://github.com/sevvalozer.png" width="50"></a> | **Şevval Özer** | Developer / Data Analyst | Veri Analitiği, Optimizasyon ve Sürdürülebilirlik Analizleri |
+## 👥 Takım Üyeleri (Takım 1)
+
+| Profil | İsim | Rol |
+| :---: | :--- | :--- |
+| <a href="https://github.com/mertucan"><img src="https://github.com/mertucan.png" width="50"></a> | **Mert Ucan** | Product Owner |
+| <a href="https://github.com/Fatmaa35"><img src="https://github.com/Fatmaa35.png" width="50"></a> | **Fatma Kaplan** | Scrum Master |
+| <a href="https://github.com/barisuyumaz"><img src="https://github.com/barisuyumaz.png" width="50"></a> | **Barış Uyumaz** | Developer |
+| <a href="https://github.com/sudenazkalaycik"><img src="https://github.com/sudenazkalaycik.png" width="50"></a> | **Sudenaz Kalaycık** | Developer |
+| <a href="https://github.com/sevvalozer"><img src="https://github.com/sevvalozer.png" width="50"></a> | **Şevval Özer** | Developer |
 
 ---
 
