@@ -159,11 +159,9 @@ bulunmaktadır.
 
 # 📋 Product Backlog
 
-Proje kapsamındaki kullanıcı hikâyeleri (User Stories), görevler (Tasks) ve sprint planlamaları Trello üzerinden yürütülmektedir.
+Proje kapsamındaki kullanıcı hikâyeleri (User Stories), görevler (Tasks), sprint planlamaları ve görev takip süreçleri Trello üzerinden yürütülmektedir.
 
-**Trello Board**
-
-> (Sprint sonunda bağlantı eklenecektir.)
+🔗 **[Sprint 1 Trello Board](https://trello.com/b/xORZurIX/bootcamp1st-sprint)**
 
 ---
 
