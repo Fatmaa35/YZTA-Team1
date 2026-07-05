@@ -10,11 +10,11 @@
 
 | Profil | İsim | Rol | Socials |
 | :---: | :--- | :--- | :---: |
-| <a href="https://github.com/mertucan"><img src="https://github.com/mertucan.png" width="50"></a> | **Mert Uçan** | Product Owner | <a href="https://www.linkedin.com/in/mertucan/"><img src="bootcampFiles/sprintOne/socials/linkedin.png" width="28" alt="LinkedIn"></a> |
-| <a href="https://github.com/Fatmaa35"><img src="https://github.com/Fatmaa35.png" width="50"></a> | **Fatma Kaplan** | Scrum Master | <a href="https://www.linkedin.com/in/fatma-kaplan-462499313/"><img src="bootcampFiles/sprintOne/socials/linkedin.png" width="28" alt="LinkedIn"></a> |
-| <a href="https://github.com/barisuyumaz"><img src="https://github.com/barisuyumaz.png" width="50"></a> | **Barış Uyumaz** | Developer | <a href="https://www.linkedin.com/in/barisuyumaz/"><img src="bootcampFiles/sprintOne/socials/linkedin.png" width="28" alt="LinkedIn"></a> |
-| <a href="https://github.com/sudenazkalaycik"><img src="https://github.com/sudenazkalaycik.png" width="50"></a> | **Sudenaz Kalaycık** | Developer | <a href="https://www.linkedin.com/in/sudenazkalaycik/"><img src="bootcampFiles/sprintOne/socials/linkedin.png" width="28" alt="LinkedIn"></a> |
-| <a href="https://github.com/sevvalozer"><img src="https://github.com/sevvalozer.png" width="50"></a> | **Şevval Özer** | Developer | <a href="https://www.linkedin.com/in/sevval-ozer/"><img src="bootcampFiles/sprintOne/socials/linkedin.png" width="28" alt="LinkedIn"></a> |
+| <a href="https://github.com/mertucan" target="_blank"><img src="https://github.com/mertucan.png" width="50"></a> | **Mert Uçan** | Product Owner | <a href="https://www.linkedin.com/in/mertucan/" target="_blank"><img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" width="35" alt="LinkedIn"></a> |
+| <a href="https://github.com/Fatmaa35" target="_blank"><img src="https://github.com/Fatmaa35.png" width="50"></a> | **Fatma Kaplan** | Scrum Master | <a href="https://www.linkedin.com/in/fatma-kaplan-462499313/" target="_blank"><img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" width="35" alt="LinkedIn"></a> |
+| <a href="https://github.com/barisuyumaz" target="_blank"><img src="https://github.com/barisuyumaz.png" width="50"></a> | **Barış Uyumaz** | Developer | <a href="https://www.linkedin.com/in/barisuyumaz/" target="_blank"><img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" width="35" alt="LinkedIn"></a> |
+| <a href="https://github.com/sudenazkalaycik" target="_blank"><img src="https://github.com/sudenazkalaycik.png" width="50"></a> | **Sudenaz Kalaycık** | Developer | <a href="https://www.linkedin.com/in/sudenazkalaycik/" target="_blank"><img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" width="35" alt="LinkedIn"></a> |
+| <a href="https://github.com/sevvalozer" target="_blank"><img src="https://github.com/sevvalozer.png" width="50"></a> | **Şevval Özer** | Developer | <a href="https://www.linkedin.com/in/sevval-ozer/" target="_blank"><img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" width="35" alt="LinkedIn"></a> |
 
 ---
 
