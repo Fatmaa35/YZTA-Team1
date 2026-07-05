@@ -1,4 +1,4 @@
-# 🌱 YemekhanAI – Üniversite Beslenme ve Sürdürülebilirlik Yönetim Sistemi
+# YemekhanAI – Üniversite Beslenme ve Sürdürülebilirlik Yönetim Sistemi
 
 > Yapay zeka destekli karar destek sistemi ile üniversite yemekhanelerinde menü planlama, stok yönetimi, öğrenci katılımı ve sürdürülebilirlik analizlerini destekleyen entegre bir platform.
 
