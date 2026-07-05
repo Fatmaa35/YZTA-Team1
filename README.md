@@ -66,7 +66,9 @@ Sistemin temel amacı;
 
 - Supabase (PostgreSQL)
 
-![Database Schema Diagram](bootcampFiles/sprintOne/database-schemaDiagram.png)
+<a href="bootcampFiles/sprintOne/database-schemaDiagram.png" target="_blank">
+  <img src="bootcampFiles/sprintOne/database-schemaDiagram.png" alt="Database Schema Diagram">
+</a>
 
 ## Yapay Zeka
 
@@ -165,7 +167,9 @@ Proje kapsamındaki kullanıcı hikâyeleri (User Stories), görevler (Tasks), s
 
 🔗 **[Sprint 1 Trello Board](https://trello.com/invite/b/6a39b01ac7486cd960963d06/ATTI61c96b260ca26974531643958cc5a9d3E8F8A550/bootcamp1st-sprint)**
 
-![Sprint 1 Trello Board](bootcampFiles/sprintOne/boardUpdate/27.png)
+<a href="bootcampFiles/sprintOne/boardUpdate/27.png" target="_blank">
+  <img src="bootcampFiles/sprintOne/boardUpdate/27.png" alt="Sprint 1 Trello Board">
+</a>
 
 ---
 
@@ -197,11 +201,21 @@ Her kullanıcı hikâyesi geliştirme sürecini kolaylaştıracak şekilde göre
 
 Takım içi günlük iletişim ve ilerleme takibi Slack ve WhatsApp üzerinden asenkron olarak yürütülmektedir.
 
-![Daily Scrum Toplantı 1](bootcampFiles/sprintOne/boardUpdate/toplanti1.png)
+<a href="bootcampFiles/sprintOne/boardUpdate/1.png" target="_blank">
+  <img src="bootcampFiles/sprintOne/boardUpdate/1.png" alt="Daily Scrum Toplantı 1">
+</a>
 
-![Daily Scrum Toplantı 2](bootcampFiles/sprintOne/boardUpdate/toplanti2.jpeg)
+<a href="bootcampFiles/sprintOne/boardUpdate/toplanti1.png" target="_blank">
+  <img src="bootcampFiles/sprintOne/boardUpdate/toplanti1.png" alt="Daily Scrum Toplantı 2">
+</a>
 
-![Daily Scrum Toplantı 3](bootcampFiles/sprintOne/boardUpdate/toplanti3.png)
+<a href="bootcampFiles/sprintOne/boardUpdate/toplanti2.jpeg" target="_blank">
+  <img src="bootcampFiles/sprintOne/boardUpdate/toplanti2.jpeg" alt="Daily Scrum Toplantı 3">
+</a>
+
+<a href="bootcampFiles/sprintOne/boardUpdate/toplanti3.png" target="_blank">
+  <img src="bootcampFiles/sprintOne/boardUpdate/toplanti3.png" alt="Daily Scrum Toplantı 4">
+</a>
 
 ---
 
@@ -212,25 +226,41 @@ Sprint planlaması ve görev takibi Trello üzerinden yürütülmektedir.
 <details>
 <summary>Güncellemeler</summary>
 
-![Sprint Board Update 2](bootcampFiles/sprintOne/boardUpdate/1.png)
+<a href="bootcampFiles/sprintOne/boardUpdate/2.png" target="_blank">
+  <img src="bootcampFiles/sprintOne/boardUpdate/2.png" alt="Sprint Board Update 2">
+</a>
 
-![Sprint Board Update 2](bootcampFiles/sprintOne/boardUpdate/2.png)
+<a href="bootcampFiles/sprintOne/boardUpdate/3.png" target="_blank">
+  <img src="bootcampFiles/sprintOne/boardUpdate/3.png" alt="Sprint Board Update 3">
+</a>
 
-![Sprint Board Update 3](bootcampFiles/sprintOne/boardUpdate/3.png)
+<a href="bootcampFiles/sprintOne/boardUpdate/4.png" target="_blank">
+  <img src="bootcampFiles/sprintOne/boardUpdate/4.png" alt="Sprint Board Update 4">
+</a>
 
-![Sprint Board Update 4](bootcampFiles/sprintOne/boardUpdate/4.png)
+<a href="bootcampFiles/sprintOne/boardUpdate/5.png" target="_blank">
+  <img src="bootcampFiles/sprintOne/boardUpdate/5.png" alt="Sprint Board Update 5">
+</a>
 
-![Sprint Board Update 5](bootcampFiles/sprintOne/boardUpdate/5.png)
+<a href="bootcampFiles/sprintOne/boardUpdate/6.png" target="_blank">
+  <img src="bootcampFiles/sprintOne/boardUpdate/6.png" alt="Sprint Board Update 6">
+</a>
 
-![Sprint Board Update 6](bootcampFiles/sprintOne/boardUpdate/6.png)
+<a href="bootcampFiles/sprintOne/boardUpdate/21.png" target="_blank">
+  <img src="bootcampFiles/sprintOne/boardUpdate/21.png" alt="Sprint Board Update 21">
+</a>
 
-![Sprint Board Update 21](bootcampFiles/sprintOne/boardUpdate/21.png)
+<a href="bootcampFiles/sprintOne/boardUpdate/22.png" target="_blank">
+  <img src="bootcampFiles/sprintOne/boardUpdate/22.png" alt="Sprint Board Update 22">
+</a>
 
-![Sprint Board Update 22](bootcampFiles/sprintOne/boardUpdate/22.png)
+<a href="bootcampFiles/sprintOne/boardUpdate/24.png" target="_blank">
+  <img src="bootcampFiles/sprintOne/boardUpdate/24.png" alt="Sprint Board Update 24">
+</a>
 
-![Sprint Board Update 24](bootcampFiles/sprintOne/boardUpdate/24.png)
-
-![Sprint Board Update 26](bootcampFiles/sprintOne/boardUpdate/26.png)
+<a href="bootcampFiles/sprintOne/boardUpdate/26.png" target="_blank">
+  <img src="bootcampFiles/sprintOne/boardUpdate/26.png" alt="Sprint Board Update 26">
+</a>
 
 </details>
 
