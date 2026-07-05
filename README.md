@@ -212,6 +212,8 @@ Sprint planlaması ve görev takibi Trello üzerinden yürütülmektedir.
 <details>
 <summary>Güncellemeler</summary>
 
+![Sprint Board Update 2](bootcampFiles/sprintOne/boardUpdate/1.png)
+
 ![Sprint Board Update 2](bootcampFiles/sprintOne/boardUpdate/2.png)
 
 ![Sprint Board Update 3](bootcampFiles/sprintOne/boardUpdate/3.png)
@@ -226,11 +228,7 @@ Sprint planlaması ve görev takibi Trello üzerinden yürütülmektedir.
 
 ![Sprint Board Update 22](bootcampFiles/sprintOne/boardUpdate/22.png)
 
-![Sprint Board Update 23](bootcampFiles/sprintOne/screenshots/23.jpeg)
-
 ![Sprint Board Update 24](bootcampFiles/sprintOne/boardUpdate/24.png)
-
-![Sprint Board Update 25](bootcampFiles/sprintOne/screenshots/25.jpeg)
 
 ![Sprint Board Update 26](bootcampFiles/sprintOne/boardUpdate/26.png)
 
