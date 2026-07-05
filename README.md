@@ -62,7 +62,7 @@ Sistemin temel amacı;
 
 - FastAPI (Python)
 
-## Veritabanı
+## Veritabanı Diyagramı
 
 - Supabase (PostgreSQL)
 
