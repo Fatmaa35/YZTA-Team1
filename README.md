@@ -8,8 +8,6 @@
 
 ## 👥 Takım Üyeleri (Takım 1)
 
-## 👥 Takım Üyeleri (Takım 1)
-
 | Profil | İsim | Rol |
 | :---: | :--- | :--- |
 | <a href="https://github.com/mertucan"><img src="https://github.com/mertucan.png" width="50"></a> | **Mert Ucan** | Product Owner |
