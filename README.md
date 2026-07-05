@@ -163,7 +163,15 @@ bulunmaktadır.
 
 # 📋 Product Backlog
 
-Proje kapsamındaki kullanıcı hikâyeleri (User Stories), görevler (Tasks), sprint planlamaları ve görev takip süreçleri Trello üzerinden yürütülmektedir.
+Proje kapsamında kullanıcı hikâyeleri (User Stories) önceliklendirilmiş ve geliştirme süreci üç sprint olacak şekilde planlanmıştır. Sprint kapsamları, ürünün Minimum Viable Product (MVP) hedefleri ve takımın geliştirme kapasitesi dikkate alınarak Story Point tahminleri ile belirlenmiştir.
+
+| Sprint | Hedeflenen Story Point |
+| :----- | :--------------------: |
+| Sprint 1 | 50 |
+| Sprint 2 | 100 |
+| Sprint 3 | 100 |
+
+Toplam proje kapsamı **250 Story Point** olarak planlanmıştır. Sprint 1'de temel sistem mimarisinin oluşturulması, veritabanı tasarımı ve çekirdek modüllerin geliştirilmesi hedeflenirken, Sprint 2 ve Sprint 3'te yapay zekâ destekli analizler ve sistemin tamamlayıcı özelliklerinin geliştirilmesi planlanmaktadır.
 
 🔗 **[Sprint 1 Trello Board](https://trello.com/invite/b/6a39b01ac7486cd960963d06/ATTI61c96b260ca26974531643958cc5a9d3E8F8A550/bootcamp1st-sprint)**
 
@@ -191,9 +199,7 @@ Sprint 1 kapsamında;
 
 ## Product Backlog Düzeni
 
-Sprint 1 kapsamında kullanıcı hikâyeleri oluşturulmuş ve önceliklendirilmiştir.
-
-Her kullanıcı hikâyesi geliştirme sürecini kolaylaştıracak şekilde görevlere ayrılmış ve Story Point tahminleri doğrultusunda sprint kapsamına alınmıştır.
+Sprint 1 kapsamında proje için User Stories belirlenmiş, önceliklendirilmiş ve geliştirme görevlerine ayrılmıştır. Sprint planlamasında 50 Story Point hedeflenmiş olmakla birlikte, proje fikrinin belirlenmesi, gereksinim analizi ve sistem mimarisinin oluşturulması süreçlerinin Sprint 1 içerisinde tamamlanması nedeniyle 26 kullanıcı hikâyesi backlog'a eklenmiştir. Kalan kullanıcı hikâyelerinin Sprint 2 kapsamında oluşturulması ve geliştirme sürecine dahil edilmesi planlanmaktadır.
 
 ---
 
