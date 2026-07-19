@@ -1,4 +1,4 @@
-# YemekhanAI – Üniversite Beslenme ve Sürdürülebilirlik Yönetim Sistemi
+# TabloDot – Üniversite Beslenme ve Sürdürülebilirlik Yönetim Sistemi
 
 > Yapay zeka destekli karar destek sistemi ile üniversite yemekhanelerinde menü planlama, stok yönetimi, öğrenci katılımı ve sürdürülebilirlik analizlerini destekleyen entegre bir platform.
 
@@ -20,13 +20,13 @@
 
 # 💡 Ürün Adı
 
-**YemekhanAI**
+**TabloDot**
 
 ---
 
 # 📝 Proje Tanımı
 
-YemekhanAI, üniversite yemekhanelerinin operasyonel süreçlerini veri odaklı yöntemlerle desteklemek amacıyla geliştirilen yapay zeka tabanlı bir karar destek sistemidir.
+TabloDot, üniversite yemekhanelerinin operasyonel süreçlerini veri odaklı yöntemlerle desteklemek amacıyla geliştirilen yapay zeka tabanlı bir karar destek sistemidir.
 
 Proje kapsamında farklı problem alanları değerlendirilmiş; veri erişilebilirliği, uygulanabilirlik ve teknik gerçekleştirilebilirlik kriterleri doğrultusunda kampüs beslenme yönetimi problemi Minimum Viable Product (MVP) olarak belirlenmiştir.
 
@@ -188,7 +188,7 @@ Toplam proje kapsamı **250 Story Point** olarak planlanmıştır. Sprint 1'de t
 ---
 
 <details>
-<summary><strong>🔄 Sprint 1</strong></summary>
+<summary><h1><strong>🔄 Sprint 1</strong></h1></summary>
 
 ## Sprint Notları
 
@@ -198,7 +198,7 @@ Sprint 1 kapsamında;
 - Farklı proje fikirleri değerlendirilmiştir.
 - Veri erişilebilirliği ve uygulanabilirlik analizleri yapılmıştır.
 - Kampüs beslenme yönetimi problemi MVP olarak seçilmiştir.
-- Ürün ismi **YemekhanAI** olarak belirlenmiştir.
+- Ürün ismi **TabloDot** olarak belirlenmiştir.
 - Sistem mimarisi planlanmıştır.
 - Kullanılacak teknolojiler belirlenmiştir.
 
@@ -237,7 +237,7 @@ Takım içi günlük iletişim ve ilerleme takibi Slack ve WhatsApp üzerinden a
 Sprint planlaması ve görev takibi Trello üzerinden yürütülmektedir.
 
 <details>
-<summary>Güncellemeler</summary>
+<summary><strong>Güncellemeler</strong></summary>
 
 <a href="bootcampFiles/sprintOne/boardUpdate/2.png" target="_blank">
   <img src="bootcampFiles/sprintOne/boardUpdate/2.png" alt="Sprint Board Update 2">
@@ -329,7 +329,8 @@ karar verilmiştir.
 
 ---
 
-# 🔄 Sprint 2
+<details>
+<summary><h1><strong>🔄 Sprint 2</strong></h1></summary>
 
 ## Sprint Notları
 
@@ -341,6 +342,7 @@ Sprint 2 kapsamında;
 - Yemekhane tüketim, obezite ve beslenme ilişkisini inceleyen analiz raporu hazırlanmıştır.
 - Ürün arayüzü için ekran görüntüleri ve modül çıktıları dokümantasyon sürecine eklenmiştir.
 - Sprint sürecinde takım toplantıları Meets üzerinden yürütülmüş ve ilerleme kayıt altına alınmıştır.
+- 2. Sprint kapsamında 144 puan tamamlandı. Ekibimiz 1. Sprint'ten bile daha yoğun çalışma sergileyerek, o dönemde elde ettiğimizden daha fazla puan kazandı.
 
 ---
 
@@ -373,7 +375,7 @@ Takım içi günlük iletişim ve ilerleme takibi Whatsapp ve Meets üzerinden a
 Sprint planlaması ve görev takibi Trello üzerinden yürütülmektedir.
 
 <details>
-<summary>Güncellemeler</summary>
+<summary><strong>Güncellemeler</strong></summary>
 
 <a href="bootcampFiles/sprintTwo/BoardUpdate/1.png" target="_blank">
   <img src="bootcampFiles/sprintTwo/BoardUpdate/1.png" alt="Sprint 2 Board Update 1">
@@ -431,7 +433,7 @@ Sprint 2 sonunda;
 - Yemekhane tüketimi, obezite ve beslenme korelasyonuna ilişkin PDF raporu hazırlanmış; Sprint 2 ürün ekran görüntüleri `bootcampFiles/sprintTwo/screenshots` klasöründe toplanmıştır.
 
 <details>
-<summary>Ürün Görselleri</summary>
+<summary><strong>Ürün Görselleri</strong></summary>
 
 <a href="bootcampFiles/sprintTwo/screenshots/9.png" target="_blank">
   <img src="bootcampFiles/sprintTwo/screenshots/9.png" alt="Sprint 2 Ürün Görseli 9">
@@ -533,14 +535,22 @@ Sprint sonunda aşağıdaki kararlar alınmıştır.
 - Ürün ekran görüntülerinin ayrı bir görseller bölümü altında toplanmasına
 - Analiz raporlarının teslim dokümantasyonunda daha görünür hale getirilmesine
 - Sprint 3'te final ürün durumunun daha kısa ve net bir akışla sunulmasına
+- Mobil uygulama geliştirme sürecinin Sprint 3'te gerçekleştirilmesine
 
 karar verilmiştir.
 
 ---
 
-# 📌 Sprint 3
+</details>
+
+---
+
+<details>
+<summary><h1><strong>📌 Sprint 3</strong></h1></summary>
 
 Sprint 3 süreci ve proje teslimine ilişkin bilgiler sprint sonunda eklenecektir.
+
+</details>
 
 ---
 
