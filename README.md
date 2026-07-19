@@ -199,7 +199,7 @@ Toplam proje kapsamı **250 Story Point** olarak planlanmıştır. Sprint 1'de t
 ---
 
 <details>
-<summary><h1><strong>🔄 Sprint 1</strong></h1></summary>
+<summary><h1><strong> Sprint 1</strong></h1></summary>
 
 ## Sprint Notları
 
@@ -341,7 +341,7 @@ karar verilmiştir.
 ---
 
 <details>
-<summary><h1><strong>🔄 Sprint 2</strong></h1></summary>
+<summary><h1><strong> Sprint 2</strong></h1></summary>
 
 ## Sprint Notları
 
