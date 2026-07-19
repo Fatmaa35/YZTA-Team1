@@ -24,6 +24,13 @@
 
 ---
 
+# 🔗 Proje Bağlantıları
+
+- **Ana Proje Reposu:** [mertucan/YZTA-Team1](https://github.com/mertucan/YZTA-Team1)
+- **Mobil Uygulama Reposu:** [sudenazkalaycik/YZA-Team1-TabloDot](https://github.com/sudenazkalaycik/YZA-Team1-TabloDot)
+
+---
+
 # 📝 Proje Tanımı
 
 TabloDot, üniversite yemekhanelerinin operasyonel süreçlerini veri odaklı yöntemlerle desteklemek amacıyla geliştirilen yapay zeka tabanlı bir karar destek sistemidir.
@@ -57,6 +64,10 @@ Sistemin temel amacı;
 - React.js
 - Vite
 - Axios
+
+## Mobil Uygulama
+
+- Mobil uygulama geliştirme süreci ayrı bir repo üzerinden yürütülmektedir: [sudenazkalaycik/YZA-Team1-TabloDot](https://github.com/sudenazkalaycik/YZA-Team1-TabloDot)
 
 ## Backend
 
@@ -343,6 +354,7 @@ Sprint 2 kapsamında;
 - Ürün arayüzü için ekran görüntüleri ve modül çıktıları dokümantasyon sürecine eklenmiştir.
 - Sprint sürecinde takım toplantıları Meets üzerinden yürütülmüş ve ilerleme kayıt altına alınmıştır.
 - 2. Sprint kapsamında 144 puan tamamlandı. Ekibimiz 1. Sprint'ten bile daha yoğun çalışma sergileyerek, o dönemde elde ettiğimizden daha fazla puan kazandı.
+- Mobil uygulama geliştirme süreci için ayrı repo oluşturulmuştur: [sudenazkalaycik/YZA-Team1-TabloDot](https://github.com/sudenazkalaycik/YZA-Team1-TabloDot)
 
 ---
 
@@ -535,7 +547,7 @@ Sprint sonunda aşağıdaki kararlar alınmıştır.
 - Ürün ekran görüntülerinin ayrı bir görseller bölümü altında toplanmasına
 - Analiz raporlarının teslim dokümantasyonunda daha görünür hale getirilmesine
 - Sprint 3'te final ürün durumunun daha kısa ve net bir akışla sunulmasına
-- Mobil uygulama geliştirme sürecinin Sprint 3'te gerçekleştirilmesine
+- Mobil uygulama geliştirme sürecinin Sprint 3'te [mobil uygulama reposu](https://github.com/sudenazkalaycik/YZA-Team1-TabloDot) üzerinden gerçekleştirilmesine
 
 karar verilmiştir.
 
@@ -546,7 +558,7 @@ karar verilmiştir.
 ---
 
 <details>
-<summary><h1><strong>📌 Sprint 3</strong></h1></summary>
+<summary><h1><strong>🔄 Sprint 3</strong></h1></summary>
 
 Sprint 3 süreci ve proje teslimine ilişkin bilgiler sprint sonunda eklenecektir.
 
