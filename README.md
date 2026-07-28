@@ -18,12 +18,12 @@
 
 ---
 
+<h1 align="center">TabloDot</h1>
+
 <p align="center">
-  <img src="assets/logo.png" alt="TabloDot Logo" width="220">
+  <img src="bootcampFiles/sprintTwo/screenshots/logo.png" alt="TabloDot Logo" width="220">
 </p>
 
-<h1 align="center">💡 TabloDot</h1>
----
 
 # 🔗 Proje Bağlantıları
 
