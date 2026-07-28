@@ -18,10 +18,11 @@
 
 ---
 
-# 💡 Ürün Adı
+<p align="center">
+  <img src="assets/logo.png" alt="TabloDot Logo" width="220">
+</p>
 
-**TabloDot**
-
+<h1 align="center">💡 TabloDot</h1>
 ---
 
 # 🔗 Proje Bağlantıları
