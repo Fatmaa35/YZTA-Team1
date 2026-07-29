@@ -768,7 +768,8 @@ Sprint sonunda aşağıdaki kararlar alınmıştır.
 - Görsel içeriklerin README içerisinde ilgili sprint başlıkları altında toplanmasına
 - SSS dokümanının proje tesliminde destekleyici kaynak olarak kullanılmasına
 - Mobil uygulama ve ana web projesi arasındaki bağlantının README'de açık şekilde gösterilmesine
-- Final ürün sunumunda operasyonel fayda, maliyet kontrolü, sürdürülebilirlik etkisi, sağlık uygunluğu ve ölçülebilir başarı metriklerinin öne çıkarılmasına
+- Final ürün sunumunda operasyonel fayda, maliyet kontrolü, sürdürülebilirlik etkisi, sağlık uygunluğu ve ölçülebilir başarı metriklerinin öne çıkarılmasına,
+- Projenin sprintler boyunca geliştirilen tüm modüllerinin entegre edilerek final teslimine hazır hale getirilmesine
 
 karar verilmiştir.
 
