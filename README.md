@@ -594,7 +594,8 @@ Sprint 3 kapsamında;
 - Sürdürülebilirlik, sağlık riski, akademik araştırma verisi ve kurumsal kalite raporlaması gibi tamamlayıcı modüller teslim kapsamının ayırt edici parçaları olarak düzenlenmiştir.
 - Kullanıcıların ürünü daha hızlı anlayabilmesi için Sık Sorulan Sorular dokümanı hazırlanmıştır: [`bootcampFiles/sprintThree/SSS.md`](bootcampFiles/sprintThree/SSS.md)
 - Sprint 3 board güncellemeleri, toplantı görselleri ve ürün ekran görüntüleri README içerisine eklenmiştir.
-- Proje teslimine yönelik tüm hedefler tamamlanmıştır.
+- Sprint planlaması kapsamında Bootcamp sonunda toplam **250 Story Point** tamamlanması hedeflenmiştir. Bu doğrultuda **Sprint 1'de 26 Story Point**, **Sprint 2'de 144 Story Point** ve **Sprint 3'te 80 Story Point** başarıyla tamamlanmış; böylece belirlenen **250 Story Point** hedefine ulaşılmıştır. Ekibimiz, sprintler boyunca planlanan geliştirmeleri tamamlayarak proje kapsamını başarıyla sonlandırmış ve ürünü final teslimine hazır hale getirmiştir.
+
 
 ---
 
