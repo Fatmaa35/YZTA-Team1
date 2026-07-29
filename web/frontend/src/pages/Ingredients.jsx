@@ -1,0 +1,1685 @@
+import { Fragment, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { generateOrder } from "../api/orders";
+import {
+  getIngredients,
+  createIngredient,
+  updateIngredient,
+  deleteIngredient,
+  getBatches,
+  createBatch,
+  deleteBatch,
+  getMarketPrices,
+  fetchMarketPrice,
+  getMarketHealth,
+  selfHealMarket,
+  getStockAlerts,
+  closeServiceDay,
+  getForecast,
+  applyAiMinStock,
+} from "../api/ingredients";
+import { todayLocal } from "../utils/date";
+import {
+  MONTHS,
+  a101NeedsVerification,
+  daysUntil,
+  emptyBatchForm,
+  emptyForm,
+  expiryStyle,
+  isInSeason,
+  numericPayloadValue,
+  numericValue,
+} from "../utils/ingredients";
+import LoadingSpinner from "../components/LoadingSpinner";
+
+function SeasonalBadge({ item }) {
+  const local = item.is_local === true;
+  const seasonal = isInSeason(item);
+  if (!local && !seasonal) return null;
+  return (
+    <span style={{ display: "inline-flex", gap: 4, flexWrap: "wrap" }}>
+      {local && <span style={badgeLocal}>Yerel</span>}
+      {seasonal && <span style={badgeSeason}>Mevsimde</span>}
+    </span>
+  );
+}
+
+/* ─── A101 Fiyat Hücresi ────────────────────────────────────────────────────── */
+function A101Cell({ rec, ingredient, ingredientName, error, busy, onFetch, onManualEdit }) {
+  // Taze çekimde backend needs_verification döndürür; kayıtlı kayıtta ada göre hesapla.
+  const flagged = rec && (rec.needs_verification ?? a101NeedsVerification(ingredientName, rec.product_name));
+  const fmtDate = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+  // Elle girilmiş piyasa fiyatı (Migros kaydı olmayan malzemeler için tek kaynak)
+  const manualPrice = ingredient?.market_price;
+
+  // Migros kaydı yok VEYA ajan "ham ürün bulunamadı" dedi:
+  // elle fiyat girilmişse Migros fiyatı gibi göster, kaynağını "Manuel" rozetiyle belirt.
+  if (!rec || rec.needs_manual_entry) {
+    if (manualPrice != null && Number(manualPrice) > 0) {
+      return (
+        <div style={marketCell}>
+          <div style={marketCellRow}>
+            <span style={marketPriceText}>
+              {Number(manualPrice).toFixed(2)} TL/{ingredient?.unit}
+              <span style={manualBadge} title="Fiyat elle girildi (Migros'ta uygun ham ürün yok)">
+                Manuel
+              </span>
+            </span>
+            <span style={marketActions}>
+              <button onClick={onManualEdit} style={btnIconSm} title="Elle girilen fiyatı düzenle">
+                Düzenle
+              </button>
+            </span>
+          </div>
+          <div style={{ fontSize: 9, color: "var(--text3)" }}>
+            {rec?.needs_manual_entry ? "Migros'ta ham ürün yok" : "Elle girilen piyasa fiyatı"}
+          </div>
+          {ingredient?.last_price_checked_at && (
+            <div style={{ fontSize: 9, color: "var(--text3)" }}>
+              Kontrol: {ingredient.last_price_checked_at}
+            </div>
+          )}
+          <button onClick={onFetch} disabled={busy} style={{ ...btnIconSm, marginTop: 2 }} title="Migros'ta tekrar ara">
+            {busy ? "..." : "Migros'ta ara"}
+          </button>
+        </div>
+      );
+    }
+    // Fiyat da yoksa: net "elle girin" çağrısı
+    if (rec?.needs_manual_entry) {
+      return (
+        <div style={marketCell}>
+          <div style={{ fontSize: 10, color: "var(--amber)", fontWeight: 700 }} title={rec.warning || ""}>
+            Migros'ta yok — elle girin
+          </div>
+          <button onClick={onManualEdit} style={{ ...btnIconSm, marginTop: 2 }} title="Piyasa fiyatını elle gir">
+            Fiyat Gir
+          </button>
+          <button onClick={onFetch} disabled={busy} style={{ ...btnIconSm, marginTop: 2 }} title="Tekrar dene">
+            {busy ? "..." : "Tekrar dene"}
+          </button>
+          {error && <div style={{ fontSize: 9, color: "var(--red)" }}>{String(error).slice(0, 40)}</div>}
+        </div>
+      );
+    }
+  }
+  return (
+    <div style={marketCell}>
+      {rec ? (
+        <>
+          <div style={marketCellRow}>
+            {rec.unit_price != null ? (
+              <span style={marketPriceText}>
+                {Number(rec.unit_price).toFixed(2)} TL/{rec.pack_unit}
+                <a
+                  href={rec.product_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={`${rec.product_name || "Ürün"} — Migros sayfasını aç`}
+                  style={externalLinkBtn}
+                >
+                  ↗
+                </a>
+              </span>
+            ) : (
+              <span style={marketWarnText} title="Ürünün satış birimi çözülemedi; yalnızca paket fiyatı gösteriliyor (uydurma birim fiyat üretilmedi)">
+                {Number(rec.last_price || 0).toFixed(2)} TL / paket · birim yok
+                <a
+                  href={rec.product_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={`${rec.product_name || "Ürün"} — Migros sayfasını aç`}
+                  style={externalLinkBtn}
+                >
+                  ↗
+                </a>
+              </span>
+            )}
+            <span style={marketActions}>
+              <button onClick={onFetch} disabled={busy} style={btnIconSm} title="Fiyatı yeniden çek">
+                {busy ? "..." : "Yenile"}
+              </button>
+            </span>
+          </div>
+          <div style={{ fontSize: 9, color: "var(--text3)" }} title={rec.product_name || ""}>
+            {(rec.product_name || "").slice(0, 26)}{(rec.product_name || "").length > 26 ? "…" : ""}
+          </div>
+          {flagged && (
+            <div
+              style={{ fontSize: 9, color: "var(--amber)", fontWeight: 700, maxWidth: 160 }}
+              title={rec.warning || "Malzeme adı ile eşleşen ürün bulunamadı; yanlış ürün olabilir. Fiyat menü planlayıcıda kullanılmaz — linke tıklayıp doğrulayın."}
+            >
+              Doğrulama gerekli
+            </div>
+          )}
+          <div style={{ fontSize: 9, color: "var(--text3)" }}>Kontrol: {fmtDate(rec.checked_at)}</div>
+        </>
+      ) : (
+        <button onClick={onFetch} disabled={busy} style={btnIconSm}>
+          {busy ? "Çekiliyor..." : "Çek"}
+        </button>
+      )}
+      {error && (
+        <div style={{ fontSize: 9, color: "var(--red)", maxWidth: 150 }} title={error}>
+          {String(error).slice(0, 40)}…
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Parti Paneli ──────────────────────────────────────────────────────────── */
+function BatchPanel({ ingredient, onStockChanged }) {
+  const [batches, setBatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState(emptyBatchForm);
+  const [entryWarnings, setEntryWarnings] = useState([]); // Veri Bekçisi uyarıları
+
+  const refresh = () =>
+    getBatches(ingredient.id)
+      .then(setBatches)
+      .finally(() => setLoading(false));
+
+  useEffect(() => {
+    refresh();
+  }, [ingredient.id]);
+
+  const handleAdd = async () => {
+    if (!form.quantity || !form.purchase_date) return;
+    const saved = await createBatch(ingredient.id, {
+      quantity: numericPayloadValue(form.quantity),
+      unit_price: form.unit_price !== "" ? Number(form.unit_price) : null,
+      purchase_date: form.purchase_date,
+      expiry_date: form.expiry_date || null,
+    });
+    setEntryWarnings(saved?.warnings || []);
+    setForm(emptyBatchForm);
+    await refresh();
+    onStockChanged();
+  };
+
+  const handleDelete = async (batchId) => {
+    await deleteBatch(ingredient.id, batchId);
+    await refresh();
+    onStockChanged();
+  };
+
+  return (
+    <div style={{ padding: "12px 18px 18px", background: "var(--surface2)" }}>
+      {/* Veri Bekçisi: şüpheli giriş uyarısı (kayıt yapıldı ama kontrol önerilir) */}
+      {entryWarnings.length > 0 && (
+        <div
+          style={{
+            marginBottom: 10, padding: "8px 12px", borderRadius: 8, fontSize: 12,
+            background: "rgba(217,161,32,0.12)", border: "1px solid rgba(217,161,32,0.4)",
+            color: "var(--amber)",
+          }}
+        >
+          🛡️ <strong>Veri Bekçisi:</strong> {entryWarnings.join(" ")}
+        </div>
+      )}
+      {/* Mevsim / Yerellik bilgisi */}
+      {(ingredient.origin_region || ingredient.season_start_month) && (
+        <div
+          style={{
+            marginBottom: 10,
+            fontSize: 11,
+            color: "var(--text2)",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+          }}
+        >
+          {ingredient.origin_region && (
+            <span>
+              <strong>Kaynak:</strong> {ingredient.origin_region}
+            </span>
+          )}
+          {ingredient.season_start_month && ingredient.season_end_month && (
+            <span>
+              <strong>Sezon:</strong>{" "}
+              {
+                MONTHS.find((m) => m.value === ingredient.season_start_month)
+                  ?.label
+              }
+              {" – "}
+              {
+                MONTHS.find((m) => m.value === ingredient.season_end_month)
+                  ?.label
+              }
+              {isInSeason(ingredient) ? (
+                <span
+                  style={{
+                    color: "var(--green)",
+                    marginLeft: 4,
+                    fontWeight: 600,
+                  }}
+                >
+                  Şu an mevsimde
+                </span>
+              ) : (
+                <span style={{ color: "var(--text3)", marginLeft: 4 }}>
+                  (sezon dışı)
+                </span>
+              )}
+            </span>
+          )}
+          {ingredient.market_price > 0 && (
+            <span>
+              <strong>Piyasa fiyatı:</strong>{" "}
+              {Number(ingredient.market_price).toFixed(2)} TL
+              {ingredient.price > 0 &&
+                ingredient.market_price > ingredient.price && (
+                  <span style={{ color: "var(--green)", marginLeft: 4 }}>
+                    (
+                    {Math.round(
+                      (1 - ingredient.price / ingredient.market_price) * 100,
+                    )}
+                    % avantajlı)
+                  </span>
+                )}
+            </span>
+          )}
+        </div>
+      )}
+
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: "var(--text3)",
+          textTransform: "uppercase",
+          letterSpacing: ".06em",
+          marginBottom: 8,
+        }}
+      >
+        {ingredient.name} — Alınan Partiler
+      </div>
+      {loading ? (
+        <LoadingSpinner label="Parti bilgileri yükleniyor" minHeight={120} size={32} />
+      ) : (
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            marginBottom: 10,
+          }}
+        >
+          <thead>
+            <tr>
+              {["Miktar", "Birim Fiyat", "Alınma Tarihi", "SKT", ""].map((h) => (
+                <th key={h} style={thSm}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {batches.length === 0 && (
+              <tr>
+                <td style={tdSm} colSpan={5}>
+                  Henüz parti eklenmemiş.
+                </td>
+              </tr>
+            )}
+            {batches.map((b) => {
+              const days = daysUntil(b.expiry_date);
+              const exp = expiryStyle(days);
+              return (
+                <tr key={b.id}>
+                  <td
+                    style={{
+                      ...tdSm,
+                      fontFamily: "var(--mono)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {b.quantity} {ingredient.unit}
+                  </td>
+                  <td style={{ ...tdSm, fontFamily: "var(--mono)" }}>
+                    {b.unit_price != null && Number(b.unit_price) > 0
+                      ? `${Number(b.unit_price).toFixed(2)} TL/${ingredient.unit}`
+                      : "—"}
+                  </td>
+                  <td style={tdSm}>{b.purchase_date}</td>
+                  <td style={{ ...tdSm, fontWeight: 600, color: exp.color }}>
+                    {exp.label}
+                  </td>
+                  <td style={tdSm}>
+                    <button onClick={() => handleDelete(b.id)} style={btnXs}>
+                      Sil
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr 1fr auto",
+          gap: 8,
+          alignItems: "end",
+        }}
+      >
+        <div>
+          <div style={fieldLabelSm}>Miktar ({ingredient.unit})</div>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={form.quantity}
+            placeholder="0"
+            onChange={(e) =>
+              setForm({ ...form, quantity: numericValue(e.target.value) })
+            }
+            style={inputSm}
+          />
+        </div>
+        <div>
+          <div style={fieldLabelSm}>Birim Fiyat (TL/{ingredient.unit})</div>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={form.unit_price}
+            placeholder="0.00"
+            onChange={(e) =>
+              setForm({ ...form, unit_price: numericValue(e.target.value) })
+            }
+            style={inputSm}
+          />
+        </div>
+        <div>
+          <div style={fieldLabelSm}>Alınma Tarihi</div>
+          <input
+            type="date"
+            value={form.purchase_date}
+            onChange={(e) =>
+              setForm({ ...form, purchase_date: e.target.value })
+            }
+            style={inputSm}
+          />
+        </div>
+        <div>
+          <div style={fieldLabelSm}>Son Kul. Tarihi</div>
+          <input
+            type="date"
+            value={form.expiry_date}
+            onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
+            style={inputSm}
+          />
+        </div>
+        <button onClick={handleAdd} style={btnPrimarySm}>
+          + Parti Ekle
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Ana Sayfa ─────────────────────────────────────────────────────────────── */
+export default function Ingredients() {
+  const [items, setItems] = useState([]);
+  const [form, setForm] = useState(emptyForm);
+  const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
+  const [formOpen, setFormOpen] = useState(true);
+  const [stockListOpen, setStockListOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  // A101 fiyat eşleştirmeleri: {ingredient_id: kayit}
+  const [a101, setA101] = useState({});
+  const [a101Busy, setA101Busy] = useState(null); // ingredient_id | "all" | null
+  const [a101Progress, setA101Progress] = useState("");
+  const [a101Errors, setA101Errors] = useState({});
+  const [a101Notice, setA101Notice] = useState(""); // birim değişimi/özet bildirimi
+  const [health, setHealth] = useState(null);
+  const [healing, setHealing] = useState(false);
+  const [alerts, setAlerts] = useState(null);   // {expired, expiring_soon, shortages, counts}
+  const [alertsOpen, setAlertsOpen] = useState(true);
+  const [alertBusy, setAlertBusy] = useState(null);
+  const [orderBusy, setOrderBusy] = useState(false);
+  const [forecast, setForecast] = useState([]);
+  const [forecastOpen, setForecastOpen] = useState(false);
+  const [dayBusy, setDayBusy] = useState(false);
+  const [dayResult, setDayResult] = useState(null); // {ok, message}
+  const [minStockBusy, setMinStockBusy] = useState(false);
+  const navigate = useNavigate();
+
+  const refresh = () =>
+    getIngredients()
+      .then(setItems)
+      .finally(() => setLoading(false));
+  const refreshA101 = () =>
+    getMarketPrices()
+      .then((list) => setA101(Object.fromEntries(list.map((r) => [r.ingredient_id, r]))))
+      .catch(() => {});
+  const refreshAlerts = () => getStockAlerts().then(setAlerts).catch(() => {});
+  const refreshForecast = () => getForecast().then(setForecast).catch(() => {});
+  useEffect(() => {
+    refresh();
+    refreshA101();
+    refreshAlerts();
+    refreshForecast();
+  }, []);
+
+  // Günü Kapat: bugünün menüsü servis edildi → stok partilerden FEFO düşülür (DB)
+  const handleCloseDay = async () => {
+    setDayBusy(true);
+    setDayResult(null);
+    try {
+      const r = await closeServiceDay();
+      const short = r.shortfall_count
+        ? ` ⚠ ${r.shortfall_count} malzemede stok ihtiyacı tam karşılayamadı.`
+        : "";
+      setDayResult({
+        ok: true,
+        message: `📉 ${r.service_date} (${r.day_of_week}) kapatıldı — ${r.consumed_count} malzeme, ${r.total_portions} porsiyon servis tüketimi stoktan düşüldü.${short}`,
+      });
+      await Promise.all([refresh(), refreshAlerts(), refreshForecast()]);
+    } catch (err) {
+      setDayResult({ ok: false, message: err?.response?.data?.detail || "Gün kapatılamadı." });
+    } finally {
+      setDayBusy(false);
+    }
+  };
+
+  // AI Min-Stok: tüketim hızından malzeme bazlı kritik eşik hesaplar ve DB'ye uygular
+  const handleAiMinStock = async () => {
+    setMinStockBusy(true);
+    try {
+      const r = await applyAiMinStock();
+      setDayResult({
+        ok: true,
+        message: `🎯 AI, ${r.updated} malzemenin kritik eşiğini tüketim hızına göre güncelledi (eşik = günlük tüketim × 5 gün).`,
+      });
+      await Promise.all([refresh(), refreshAlerts(), refreshForecast()]);
+    } catch {
+      setDayResult({ ok: false, message: "Min-stok önerisi uygulanamadı." });
+    } finally {
+      setMinStockBusy(false);
+    }
+  };
+
+  // SKT'si geçmiş partiyi imha et (DB'den sil → stok otomatik düşer)
+  const handleDiscardBatch = async (ingredientId, batchId) => {
+    setAlertBusy(`d${batchId}`);
+    try {
+      await deleteBatch(ingredientId, batchId);
+      await Promise.all([refresh(), refreshAlerts()]);
+    } finally {
+      setAlertBusy(null);
+    }
+  };
+
+  // Eksik malzeme için tek tıkla stok girişi: eksik miktarı yeni parti olarak ekler (DB)
+  const handleQuickRestock = async (row) => {
+    setAlertBusy(`r${row.ingredient_id}`);
+    try {
+      await createBatch(row.ingredient_id, {
+        quantity: Number(row.shortage) || 0,
+        purchase_date: todayLocal(),
+        expiry_date: null,
+      });
+      await Promise.all([refresh(), refreshAlerts()]);
+    } finally {
+      setAlertBusy(null);
+    }
+  };
+
+  const scrollToAlerts = () => {
+    setAlertsOpen(true);
+    document.getElementById("stock-alerts")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Otomatik Sipariş Ajanı: eksik listesinden taslak sipariş üret, Siparişler sayfasına git
+  const handleGenerateOrder = async () => {
+    setOrderBusy(true);
+    try {
+      const res = await generateOrder();
+      if (res?.created === false) {
+        window.alert(res.message || "Sipariş gerektiren malzeme yok.");
+      } else {
+        navigate("/orders");
+      }
+    } catch {
+      window.alert("Sipariş oluşturulamadı.");
+    } finally {
+      setOrderBusy(false);
+    }
+  };
+
+  const handleFetchA101 = async (id) => {
+    setA101Busy(id);
+    setA101Notice("");
+    setA101Errors((prev) => ({ ...prev, [id]: null }));
+    try {
+      const rec = await fetchMarketPrice(id);
+      setA101((prev) => ({ ...prev, [id]: rec }));
+      if (rec.unit_changed) {
+        const ing = items.find((i) => i.id === id);
+        setA101Notice(`Bilgi: "${ing?.name ?? "Malzeme"}" birimi Migros ile eşitlendi: ${rec.new_unit}`);
+      }
+      refresh(); // birim ve/veya ortalama fiyat değişmiş olabilir
+    } catch (err) {
+      setA101Errors((prev) => ({ ...prev, [id]: err?.response?.data?.detail || "Migros verisi çekilemedi." }));
+    } finally {
+      setA101Busy(null);
+    }
+  };
+
+  // Tüm malzemeler için sırayla çek (siteyi yormamak için paralel değil)
+  const handleFetchAllA101 = async () => {
+    setA101Busy("all");
+    setA101Notice("");
+    const list = [...items];
+    const changed = [];
+    let ok = 0;
+    for (let i = 0; i < list.length; i++) {
+      setA101Progress(`${i + 1}/${list.length}`);
+      try {
+        const rec = await fetchMarketPrice(list[i].id);
+        setA101((prev) => ({ ...prev, [list[i].id]: rec }));
+        setA101Errors((prev) => ({ ...prev, [list[i].id]: null }));
+        ok += 1;
+        if (rec.unit_changed) changed.push(`${list[i].name}: ${rec.new_unit}`);
+      } catch (err) {
+        setA101Errors((prev) => ({ ...prev, [list[i].id]: err?.response?.data?.detail || "çekilemedi" }));
+      }
+    }
+    setA101Progress("");
+    setA101Busy(null);
+    let msg = `${ok}/${list.length} malzeme için Migros fiyatı çekildi.`;
+    if (changed.length) msg += ` Birimi eşitlenenler: ${changed.join(", ")}.`;
+    setA101Notice(msg);
+    refresh();
+  };
+
+  const loadHealth = async () => {
+    try { setHealth(await getMarketHealth()); } catch { setHealth(null); }
+  };
+  useEffect(() => { loadHealth(); }, []);
+
+  const handleSelfHeal = async () => {
+    setHealing(true);
+    setA101Notice("");
+    try {
+      const rep = await selfHealMarket();
+      setHealth(rep);
+      setA101Notice(
+        rep.api_ok && rep.price_field
+          ? `Migros fiyat servisi sağlıklı (alan: ${rep.price_field}). Örnek: ${rep.sample?.name ?? "-"}: ${rep.sample?.unit_price ?? "-"} TL/${rep.sample?.unit ?? "-"}.`
+          : `Migros servisi sorunlu: ${rep.message}`
+      );
+    } catch {
+      setA101Notice("Sağlık kontrolü yapılamadı.");
+    } finally {
+      setHealing(false);
+    }
+  };
+
+  /* Temel sayısal alanlar — fiyat artık burada değil: partiler (alımlar) üzerinden
+     miktar-ağırlıklı ortalama olarak otomatik hesaplanır */
+  const basicFields = [
+    { label: "Malzeme Adı", key: "name", type: "text" },
+    { label: "Kalori", key: "calories", type: "number" },
+    { label: "Protein (g)", key: "protein", type: "number" },
+    { label: "Demir (mg)", key: "iron", type: "number" },
+  ];
+
+  const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+
+  const handleSubmit = async () => {
+    if (!form.name) return;
+    const payload = {
+      name: form.name,
+      unit: form.unit,
+      calories: numericPayloadValue(form.calories),
+      protein: numericPayloadValue(form.protein),
+      iron: numericPayloadValue(form.iron),
+      is_local: Boolean(form.is_local),
+      origin_region: form.origin_region || null,
+      season_start_month:
+        form.season_start_month !== "" ? Number(form.season_start_month) : null,
+      season_end_month:
+        form.season_end_month !== "" ? Number(form.season_end_month) : null,
+      market_price: form.market_price !== "" ? Number(form.market_price) : null,
+      last_price_checked_at: form.last_price_checked_at || null,
+      min_stock: form.min_stock !== "" ? Number(form.min_stock) : null,
+    };
+    if (editingId) {
+      await updateIngredient(editingId, payload);
+    } else {
+      await createIngredient(payload);
+    }
+    setForm(emptyForm);
+    setEditingId(null);
+    refresh();
+  };
+
+  const startEdit = (item) => {
+    setEditingId(item.id);
+    setFormOpen(true);
+    setForm({
+      name: item.name,
+      unit: item.unit,
+      price: item.price,
+      calories: item.calories,
+      protein: item.protein,
+      iron: item.iron,
+      is_local: Boolean(item.is_local),
+      origin_region: item.origin_region ?? "",
+      season_start_month: item.season_start_month ?? "",
+      season_end_month: item.season_end_month ?? "",
+      market_price: item.market_price ?? "",
+      last_price_checked_at: item.last_price_checked_at ?? "",
+      min_stock: item.min_stock ?? "",
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+  };
+
+  const filtered = items.filter((i) =>
+    i.name.toLowerCase().includes(search.toLowerCase()),
+  );
+  const localCount = items.filter((i) => i.is_local).length;
+  const pricedCount = items.filter((i) => a101[i.id]).length;
+  const expiredCount = alerts?.counts?.expired ?? 0;
+  const expiringCount = alerts?.counts?.expiring_soon ?? 0;
+  const shortageCount =
+    alerts?.counts?.shortages ??
+    items.filter((i) => Number(i.stock || 0) < Number(i.min_stock ?? 15)).length;
+  const stockSummary = [
+    { label: "Toplam malzeme", value: items.length },
+    { label: "SKT'si geçen", value: expiredCount, tone: expiredCount ? "var(--red)" : "var(--ingredients-muted-strong)" },
+    { label: "SKT'si yaklaşan", value: expiringCount, tone: expiringCount ? "var(--amber)" : "var(--ingredients-muted-strong)" },
+    { label: "Eksik / kritik", value: shortageCount, tone: shortageCount ? "var(--red)" : "var(--ingredients-muted-strong)" },
+    { label: "Migros fiyatlı", value: pricedCount },
+  ];
+
+  return (
+    <div className="ingredients-page" style={page}>
+      <div style={{ ...pageHeader, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+        <div style={pageTitle}>Malzeme Deposu</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            type="button"
+            onClick={handleCloseDay}
+            disabled={dayBusy}
+            title="Bugünün menüsü servis edildi: gereken malzemeler partilerden (önce SKT'si yakın) stoktan düşülür"
+            style={{ ...alertActionBtn, padding: "8px 14px", fontSize: 12, opacity: dayBusy ? 0.6 : 1 }}
+          >
+            {dayBusy ? "Kapatılıyor..." : "📉 Günü Kapat (Servis Tüketimi)"}
+          </button>
+          {(expiredCount + expiringCount + shortageCount) > 0 && (
+            <button
+              type="button"
+              onClick={scrollToAlerts}
+              title={`${expiredCount} SKT geçen · ${expiringCount} yaklaşan · ${shortageCount} eksik malzeme`}
+              style={bellBtn}
+            >
+              <span style={{ fontSize: 18 }}>🔔</span>
+              <span style={bellBadge}>{expiredCount + expiringCount + shortageCount}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {dayResult && (
+        <div style={{
+          padding: "10px 14px", borderRadius: 8, marginBottom: 14, fontSize: 13,
+          background: dayResult.ok ? "rgba(22,163,74,0.10)" : "rgba(220,38,38,0.10)",
+          border: `1px solid ${dayResult.ok ? "rgba(22,163,74,0.3)" : "rgba(220,38,38,0.3)"}`,
+          color: dayResult.ok ? "var(--green, #16a34a)" : "var(--red)",
+        }}>
+          {dayResult.message}
+        </div>
+      )}
+
+      <div style={summaryGrid}>
+        {stockSummary.map((item) => (
+          <div key={item.label} style={summaryCard}>
+            <div style={summaryLabel}>{item.label}</div>
+            <div style={{ ...summaryValue, color: item.tone || "var(--ingredients-text)" }}>
+              {item.value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Akıllı Stok Uyarıları: SKT geçen/yaklaşan + gelecek menü ihtiyacına göre eksik ── */}
+      {alerts && (expiredCount > 0 || expiringCount > 0 || shortageCount > 0) && (
+        <div id="stock-alerts" style={{ ...card, borderColor: "var(--red)" }}>
+          <button type="button" style={accordionHeader} onClick={() => setAlertsOpen((v) => !v)} aria-expanded={alertsOpen}>
+            <div>
+              <div style={cardTitle}>⚠ Stok Uyarıları & İhtiyaç Listesi</div>
+              <div style={cardHint}>
+                SKT'si geçen {expiredCount} parti · Yaklaşan {expiringCount} · Gelecek menülere göre {shortageCount} eksik malzeme
+              </div>
+            </div>
+            <span style={{ fontSize: 12, color: "var(--ingredients-muted)" }}>{alertsOpen ? "Gizle ▲" : "Göster ▼"}</span>
+          </button>
+          {alertsOpen && (
+            <div style={{ padding: "0 16px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              {/* Eksik malzemeler (ne kadar sipariş edilmeli) */}
+              <div>
+                <div style={alertColTitle}>Sipariş edilecek (eksik) malzemeler</div>
+                {alerts.shortages.length === 0 ? (
+                  <div style={alertEmpty}>Eksik malzeme yok.</div>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead><tr>{["Malzeme", "Stok", "Gereken", "Eksik", ""].map((h) => <th key={h} style={alertTh}>{h}</th>)}</tr></thead>
+                    <tbody>
+                      {alerts.shortages.slice(0, 12).map((r) => (
+                        <tr key={r.ingredient_id}>
+                          <td style={alertTd}>{r.name} {r.reason === "menu" && <span style={menuTag}>menü</span>}</td>
+                          <td style={alertTd}>{r.stock} {r.unit}</td>
+                          <td style={alertTd}>{r.required} {r.unit}</td>
+                          <td style={{ ...alertTd, color: "var(--red)", fontWeight: 700 }}>{r.shortage} {r.unit}</td>
+                          <td style={alertTd}>
+                            <button
+                              onClick={() => handleQuickRestock(r)}
+                              disabled={alertBusy === `r${r.ingredient_id}`}
+                              style={alertActionBtn}
+                              title={`${r.shortage} ${r.unit} stok girişi yap (parti olarak eklenir)`}
+                            >
+                              {alertBusy === `r${r.ingredient_id}` ? "..." : "+ Stok Ekle"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                {alerts.shortages.length > 0 && (
+                  <button
+                    onClick={handleGenerateOrder}
+                    disabled={orderBusy}
+                    style={{
+                      marginTop: 10, width: "100%", padding: "9px 12px", borderRadius: 8,
+                      border: "none", background: "var(--accent)", color: "#fff",
+                      fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: orderBusy ? 0.6 : 1,
+                    }}
+                    title="Eksik malzemelerden otomatik tedarikçi sipariş taslağı oluştur"
+                  >
+                    {orderBusy ? "Oluşturuluyor..." : "🤖 Bu eksiklerden Otomatik Sipariş Oluştur"}
+                  </button>
+                )}
+              </div>
+              {/* SKT geçen / yaklaşan partiler */}
+              <div>
+                <div style={alertColTitle}>SKT'si geçen / yaklaşan partiler</div>
+                {alerts.expired.length === 0 && alerts.expiring_soon.length === 0 ? (
+                  <div style={alertEmpty}>SKT sorunu yok.</div>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead><tr>{["Malzeme", "Miktar", "SKT", "Durum", ""].map((h) => <th key={h} style={alertTh}>{h}</th>)}</tr></thead>
+                    <tbody>
+                      {[...alerts.expired, ...alerts.expiring_soon].slice(0, 12).map((r) => (
+                        <tr key={r.batch_id}>
+                          <td style={alertTd}>{r.name}</td>
+                          <td style={alertTd}>{r.quantity} {r.unit}</td>
+                          <td style={alertTd}>{r.expiry_date}</td>
+                          <td style={{ ...alertTd, color: r.days_left < 0 ? "var(--red)" : "var(--amber)", fontWeight: 700 }}>
+                            {r.days_left < 0 ? `${-r.days_left} gün geçti` : `${r.days_left} gün kaldı`}
+                          </td>
+                          <td style={alertTd}>
+                            {r.days_left < 0 && (
+                              <button
+                                onClick={() => handleDiscardBatch(r.ingredient_id, r.batch_id)}
+                                disabled={alertBusy === `d${r.batch_id}`}
+                                style={{ ...alertActionBtn, color: "var(--red)", borderColor: "var(--red)" }}
+                                title="Süresi geçen partiyi imha et (stoktan düşülür)"
+                              >
+                                {alertBusy === `d${r.batch_id}` ? "..." : "İmha Et"}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── AI Tükeniş Tahmini: tüketim hızından her malzemenin bitiş tarihi ── */}
+      {forecast.length > 0 && (
+        <div style={card}>
+          <button type="button" style={accordionHeader} onClick={() => setForecastOpen((v) => !v)} aria-expanded={forecastOpen}>
+            <div>
+              <div style={cardTitle}>📈 AI Tükeniş Tahmini</div>
+              <div style={cardHint}>
+                Son günlerin servis tüketimi + gelecek menülerden hesaplanır — {forecast.filter((f) => f.urgent).length} malzeme için sipariş günü geldi
+              </div>
+            </div>
+            <span style={{ fontSize: 12, color: "var(--ingredients-muted)" }}>{forecastOpen ? "Gizle ▲" : "Göster ▼"}</span>
+          </button>
+          {forecastOpen && (
+            <div style={{ padding: "0 16px 16px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                <button
+                  onClick={handleAiMinStock}
+                  disabled={minStockBusy}
+                  style={{ ...alertActionBtn, opacity: minStockBusy ? 0.6 : 1 }}
+                  title="Kritik eşikleri tüketim hızına göre yeniden hesapla ve uygula (eşik = günlük tüketim × 5 gün)"
+                >
+                  {minStockBusy ? "Hesaplanıyor..." : "🎯 AI ile Kritik Eşikleri Güncelle"}
+                </button>
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr>{["Malzeme", "Stok", "Günlük Tüketim", "Kaç Gün Yeter", "Tükeniş", "Son Sipariş Günü"].map((h) => (
+                    <th key={h} style={alertTh}>{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody>
+                  {forecast.slice(0, 12).map((f) => (
+                    <tr key={f.ingredient_id}>
+                      <td style={alertTd}>{f.name}</td>
+                      <td style={alertTd}>{f.stock} {f.unit}</td>
+                      <td style={alertTd}>{f.daily_rate} {f.unit}/gün</td>
+                      <td style={{ ...alertTd, fontWeight: 700, color: f.days_left <= 5 ? "var(--red)" : f.days_left <= 10 ? "var(--amber)" : "var(--ingredients-text)" }}>
+                        {f.days_left} gün
+                      </td>
+                      <td style={alertTd}>{f.depletion_date}</td>
+                      <td style={{ ...alertTd, fontWeight: f.urgent ? 700 : 400, color: f.urgent ? "var(--red)" : "var(--ingredients-muted)" }}>
+                        {f.urgent ? "BUGÜN sipariş ver" : f.order_by_date}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Form ── */}
+      <div style={card}>
+        <button
+          type="button"
+          style={accordionHeader}
+          onClick={() => setFormOpen((value) => !value)}
+          aria-expanded={formOpen}
+        >
+          <div>
+            <div style={cardTitle}>
+              {editingId ? "Malzemeyi Düzenle" : "Yeni Malzeme Ekle"}
+            </div>
+            <div style={cardHint}>Besin değeri, birim, sezon ve tedarik bilgilerini tek kayıtta tutun.</div>
+          </div>
+          <span style={accordionToggle}>{formOpen ? "Kapat" : "Aç"}</span>
+        </button>
+
+        {formOpen && (
+          <>
+        {/* Temel bilgiler */}
+        <div
+          style={{
+            padding: "16px 18px 10px",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            gap: 12,
+            alignItems: "end",
+          }}
+        >
+          {basicFields.map(({ label, key, type }) => (
+            <div key={key}>
+              <div style={fieldLabel}>{label}</div>
+              <input
+                type={type === "number" ? "text" : type}
+                inputMode={type === "number" ? "decimal" : undefined}
+                value={form[key]}
+                onFocus={(e) => {
+                  if (type === "number" && Number(form[key]) === 0)
+                    setField(key, "");
+                  e.target.select();
+                }}
+                onBlur={() => {
+                  if (type === "number" && form[key] === "") setField(key, 0);
+                }}
+                onChange={(e) =>
+                  setField(
+                    key,
+                    type === "number"
+                      ? numericValue(e.target.value)
+                      : e.target.value,
+                  )
+                }
+                style={input}
+              />
+            </div>
+          ))}
+          <div>
+            <div style={fieldLabel}>Birim</div>
+            <select
+              value={form.unit}
+              onChange={(e) => setField("unit", e.target.value)}
+              style={input}
+            >
+              {["kg", "lt", "adet", "paket", "kutu"].map((u) => (
+                <option key={u}>{u}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Mevsimsel & Yerellik bilgileri */}
+        <div
+          style={{
+            margin: "0 18px 8px",
+            borderTop: "1px solid var(--ingredients-row-border)",
+            paddingTop: 14,
+          }}
+        >
+          <div style={sectionTitle}>
+            Mevsimsel & Yerellik Bilgileri
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+              gap: 12,
+              alignItems: "end",
+            }}
+          >
+            <div>
+              <div style={fieldLabel}>Sezon Başlangıcı</div>
+              <select
+                value={form.season_start_month}
+                onChange={(e) => setField("season_start_month", e.target.value)}
+                style={input}
+              >
+                {MONTHS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <div style={fieldLabel}>Sezon Bitişi</div>
+              <select
+                value={form.season_end_month}
+                onChange={(e) => setField("season_end_month", e.target.value)}
+                style={input}
+              >
+                {MONTHS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <div style={fieldLabel}>Kaynak Bölge</div>
+              <input
+                type="text"
+                placeholder="Örn: Antalya / İzmir"
+                value={form.origin_region}
+                onChange={(e) => setField("origin_region", e.target.value)}
+                style={input}
+              />
+            </div>
+
+            <div>
+              <div style={fieldLabel}>Piyasa Fiyatı (TL) — elle giriş</div>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="Migros'ta yoksa buraya girin"
+                value={form.market_price}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) =>
+                  setField("market_price", numericValue(e.target.value))
+                }
+                style={input}
+              />
+            </div>
+
+            <div>
+              <div style={fieldLabel}>Fiyat Kontrol Tarihi</div>
+              <input
+                type="date"
+                value={form.last_price_checked_at}
+                onChange={(e) =>
+                  setField("last_price_checked_at", e.target.value)
+                }
+                style={input}
+              />
+            </div>
+
+            <div>
+              <div style={fieldLabel}>Kritik Eşik (Min Stok)</div>
+              <input
+                inputMode="decimal"
+                placeholder="Örn: 25 — altına inince uyarı"
+                value={form.min_stock}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => setField("min_stock", numericValue(e.target.value))}
+                style={input}
+              />
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                paddingBottom: 2,
+              }}
+            >
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  cursor: "pointer",
+                  fontSize: 13,
+                  color: "var(--text)",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.is_local)}
+                  onChange={(e) => setField("is_local", e.target.checked)}
+                  style={{
+                    width: 15,
+                    height: 15,
+                    accentColor: "var(--accent)",
+                  }}
+                />
+                <span>
+                  <strong>Yerel Ürün</strong>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "var(--text3)",
+                      fontWeight: 400,
+                    }}
+                  >
+                    Bölgesel / yerli tedarik
+                  </div>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Kaydet butonu */}
+        <div style={formActions}>
+          <button onClick={handleSubmit} style={btnPrimary}>
+            {editingId ? "Güncelle" : "Ekle"}
+          </button>
+          {editingId && (
+            <button onClick={cancelEdit} style={btnSm}>
+              İptal
+            </button>
+          )}
+        </div>
+          </>
+        )}
+      </div>
+
+      {/* ── Tablo ── */}
+      <div style={card}>
+        <button
+          type="button"
+          style={accordionHeader}
+          onClick={() => setStockListOpen((value) => !value)}
+          aria-expanded={stockListOpen}
+        >
+          <div>
+            <div style={cardTitle}>Stok Listesi</div>
+            <div style={cardHint}>Satıra tıklayarak parti detaylarını ve alım kayıtlarını açabilirsiniz.</div>
+          </div>
+          <span style={accordionToggle}>{stockListOpen ? "Kapat" : "Aç"}</span>
+        </button>
+        {stockListOpen && (
+          <>
+          <div style={stockToolbar}>
+            {health && (
+              <span
+                title={health.message}
+                style={{
+                  fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 999,
+                  border: "1px solid",
+                  color: health.api_ok && health.price_field ? "var(--green)" : "var(--red)",
+                  borderColor: health.api_ok && health.price_field ? "var(--green)" : "var(--red)",
+                  background: "var(--surface2)",
+                }}
+              >
+                {health.api_ok && health.price_field ? "Migros servisi sağlıklı" : "Migros servisi sorunlu"}
+                {health.product_count ? ` · ${health.product_count} ürün` : ""}
+              </span>
+            )}
+            <button
+              onClick={handleSelfHeal}
+              disabled={healing || a101Busy !== null}
+              style={{ ...btnSm, opacity: healing ? 0.7 : 1 }}
+              title="Scraper'ı sağlık kontrolünden geçirir; fiyat çıkaramıyorsa yeni strateji öğrenerek kendini onarır"
+            >
+              {healing ? "Onarılıyor..." : "Scraper'ı Onar"}
+            </button>
+            <button
+              onClick={handleFetchAllA101}
+              disabled={a101Busy !== null}
+              style={{ ...btnPrimary, opacity: a101Busy !== null ? 0.7 : 1 }}
+              title="Tüm malzemeler için Migros'tan güncel fiyat çeker (birim otomatik eşitlenir)"
+            >
+              {a101Busy === "all" ? `Çekiliyor... ${a101Progress}` : "Migros Fiyat Çek"}
+            </button>
+          </div>
+        {a101Notice && (
+          <div style={noticeBar}>
+            {a101Notice}
+          </div>
+        )}
+        <div style={searchBar}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Malzeme ara..."
+            style={input}
+          />
+        </div>
+        {loading ? (
+          <LoadingSpinner label="Stok listesi yükleniyor" minHeight={180} size={38} />
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                minWidth: 820,
+                borderCollapse: "collapse",
+              }}
+            >
+              <thead>
+                <tr>
+                  {[
+                    "",
+                    "Malzeme",
+                    "Birim",
+                    "Stok",
+                    "Migros Fiyatı",
+                    "Kalori",
+                    "Protein",
+                    "Demir",
+                    "Yerel / Mevsim",
+                    "",
+                  ].map((h) => (
+                    <th key={h} style={th}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((i) => (
+                  <Fragment key={i.id}>
+                    <tr
+                      style={{ cursor: "pointer" }}
+                      onClick={() =>
+                        setExpandedId(expandedId === i.id ? null : i.id)
+                      }
+                    >
+                      <td style={{ ...td, width: 22, color: "var(--text3)" }}>
+                        {expandedId === i.id ? "▾" : "▸"}
+                      </td>
+                      <td style={td}>
+                        <span style={{ fontWeight: 500, color: "var(--text)" }}>
+                          {i.name}
+                        </span>
+                      </td>
+                      <td style={td}>{i.unit}</td>
+                      <td
+                        style={{
+                          ...td,
+                          fontFamily: "var(--mono)",
+                          fontWeight: 600,
+                          color:
+                            i.stock < 20
+                              ? "var(--red)"
+                              : i.stock < 50
+                                ? "var(--amber)"
+                                : "var(--green)",
+                        }}
+                      >
+                        {i.stock}
+                      </td>
+                      <td style={td} onClick={(e) => e.stopPropagation()}>
+                        <A101Cell
+                          rec={a101[i.id]}
+                          ingredient={i}
+                          ingredientName={i.name}
+                          error={a101Errors[i.id]}
+                          busy={a101Busy === i.id || a101Busy === "all"}
+                          onFetch={() => handleFetchA101(i.id)}
+                          onManualEdit={() => startEdit(i)}
+                        />
+                      </td>
+                      <td style={td}>{i.calories} kcal</td>
+                      <td style={td}>{i.protein} g</td>
+                      <td style={td}>{i.iron} mg</td>
+                      <td style={td}>
+                        <SeasonalBadge item={i} />
+                      </td>
+                      <td style={td} onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => startEdit(i)} style={btnSm}>
+                          Düzenle
+                        </button>{" "}
+                        <button
+                          onClick={() => deleteIngredient(i.id).then(refresh)}
+                          style={btnSm}
+                        >
+                          Sil
+                        </button>
+                      </td>
+                    </tr>
+                    {expandedId === i.id && (
+                      <tr>
+                        <td
+                          colSpan={10}
+                          style={{
+                            padding: 0,
+                            borderBottom: "1px solid var(--border)",
+                          }}
+                        >
+                          <BatchPanel ingredient={i} onStockChanged={() => { refresh(); refreshAlerts(); }} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={10}
+                      style={{
+                        ...td,
+                        textAlign: "center",
+                        color: "var(--text3)",
+                      }}
+                    >
+                      Malzeme bulunamadı.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Stiller ───────────────────────────────────────────────────────────────── */
+const page = {
+  minHeight: "calc(100vh - 48px)",
+  margin: -24,
+  padding: 24,
+  background: "var(--ingredients-bg)",
+};
+const pageHeader = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "end",
+  gap: 16,
+  marginBottom: 14,
+};
+const pageTitle = {
+  color: "var(--ingredients-text)",
+  fontFamily: "Georgia, 'Times New Roman', serif",
+  fontSize: 34,
+  lineHeight: 1.05,
+  fontWeight: 700,
+};
+const summaryGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+  gap: 12,
+  marginBottom: 16,
+};
+const bellBtn = { position: "relative", background: "var(--ingredients-card)", border: "1px solid var(--ingredients-border)", borderRadius: 10, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center" };
+const bellBadge = { position: "absolute", top: -6, right: -6, background: "var(--red)", color: "#fff", borderRadius: 999, fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" };
+const alertActionBtn = { background: "transparent", border: "1px solid var(--accent, #4661d8)", color: "var(--accent, #4661d8)", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" };
+const alertColTitle = { fontSize: 12, fontWeight: 700, color: "var(--ingredients-text)", margin: "6px 0 8px" };
+const alertEmpty = { fontSize: 12, color: "var(--ingredients-muted)", padding: "8px 0" };
+const alertTh = { textAlign: "left", fontSize: 10, fontWeight: 700, color: "var(--ingredients-muted)", textTransform: "uppercase", letterSpacing: ".05em", padding: "6px 8px", borderBottom: "1px solid var(--ingredients-border)" };
+const alertTd = { padding: "6px 8px", color: "var(--ingredients-text)", borderBottom: "1px solid var(--ingredients-border)" };
+const menuTag = { fontSize: 9, background: "var(--accent-bg, #eef)", color: "var(--accent, #4661d8)", borderRadius: 4, padding: "1px 5px", marginLeft: 4, fontWeight: 700 };
+const summaryCard = {
+  background: "var(--ingredients-card)",
+  border: "1px solid var(--ingredients-border)",
+  borderRadius: 8,
+  padding: "13px 15px",
+  boxShadow: "0 10px 26px rgba(24, 24, 24, 0.06)",
+  backdropFilter: "blur(10px)",
+};
+const summaryLabel = {
+  color: "var(--ingredients-soft)",
+  fontSize: 10,
+  fontWeight: 800,
+  textTransform: "uppercase",
+  letterSpacing: ".06em",
+  marginBottom: 5,
+};
+const summaryValue = {
+  color: "var(--ingredients-text)",
+  fontSize: 24,
+  lineHeight: 1,
+  fontWeight: 800,
+  fontFamily: "var(--mono)",
+};
+const card = {
+  background: "var(--ingredients-card)",
+  border: "1px solid var(--ingredients-border)",
+  borderRadius: 10,
+  boxShadow: "0 14px 36px rgba(24, 24, 24, 0.07)",
+  marginBottom: 16,
+  backdropFilter: "blur(10px)",
+  overflow: "hidden",
+};
+const cardHd = {
+  padding: "15px 18px 13px",
+  borderBottom: "1px solid var(--ingredients-border)",
+  background: "var(--ingredients-card-head)",
+  color: "var(--ingredients-text)",
+  fontSize: 13,
+  fontWeight: 800,
+};
+const cardHdSplit = {
+  padding: "15px 18px 13px",
+  borderBottom: "1px solid var(--ingredients-border)",
+  background: "var(--ingredients-card-head)",
+  color: "var(--ingredients-text)",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 12,
+  flexWrap: "wrap",
+};
+const accordionHeader = {
+  width: "100%",
+  padding: "15px 18px 13px",
+  border: "none",
+  borderBottom: "1px solid var(--ingredients-border)",
+  background: "var(--ingredients-card-head)",
+  color: "var(--ingredients-text)",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 12,
+  textAlign: "left",
+  cursor: "pointer",
+};
+const accordionToggle = {
+  flexShrink: 0,
+  minWidth: 64,
+  textAlign: "center",
+  background: "var(--ingredients-button-soft)",
+  border: "1px solid var(--ingredients-border-strong)",
+  color: "var(--ingredients-muted-strong)",
+  borderRadius: 999,
+  padding: "5px 12px",
+  fontSize: 11,
+  fontWeight: 800,
+};
+const cardTitle = {
+  color: "var(--ingredients-text)",
+  fontFamily: "Georgia, 'Times New Roman', serif",
+  fontSize: 18,
+  lineHeight: 1.15,
+  fontWeight: 700,
+};
+const cardHint = {
+  color: "var(--ingredients-soft)",
+  fontSize: 12,
+  marginTop: 4,
+  fontWeight: 600,
+};
+const sectionTitle = {
+  color: "var(--ingredients-soft)",
+  fontSize: 10,
+  fontWeight: 900,
+  textTransform: "uppercase",
+  letterSpacing: ".07em",
+  marginBottom: 10,
+};
+const formActions = {
+  padding: "10px 18px 18px",
+  display: "flex",
+  gap: 8,
+  borderTop: "1px solid var(--ingredients-row-border)",
+};
+const searchBar = {
+  padding: "12px 18px",
+  background: "var(--ingredients-card-head)",
+  borderBottom: "1px solid var(--ingredients-border)",
+};
+const noticeBar = {
+  padding: "9px 18px",
+  fontSize: 12,
+  color: "var(--ingredients-muted)",
+  borderBottom: "1px solid var(--ingredients-border)",
+  background: "var(--ingredients-badge-accent-bg)",
+};
+const stockToolbar = {
+  padding: "12px 18px",
+  display: "flex",
+  gap: 8,
+  alignItems: "center",
+  justifyContent: "flex-end",
+  flexWrap: "wrap",
+  background: "var(--ingredients-card-head)",
+  borderBottom: "1px solid var(--ingredients-border)",
+};
+const marketCell = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 3,
+  minWidth: 190,
+};
+const marketCellRow = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 8,
+};
+const marketPriceText = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  fontFamily: "var(--mono)",
+  fontWeight: 800,
+  color: "var(--ingredients-text)",
+  whiteSpace: "nowrap",
+};
+const marketWarnText = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  color: "var(--amber)",
+  fontSize: 11,
+  minWidth: 0,
+};
+// Fiyatın kaynağını belli eden rozet: Migros yerine elle girilmiş değer
+const manualBadge = {
+  fontSize: 8,
+  fontWeight: 700,
+  letterSpacing: ".04em",
+  padding: "1px 5px",
+  borderRadius: 4,
+  color: "var(--accent)",
+  background: "rgba(232,128,0,0.12)",
+  border: "1px solid rgba(232,128,0,0.35)",
+  fontFamily: "system-ui, sans-serif",
+};
+const marketActions = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  flexShrink: 0,
+};
+const externalLinkBtn = {
+  textDecoration: "none",
+  color: "var(--ingredients-accent)",
+  fontSize: 12,
+  fontWeight: 800,
+  lineHeight: 1,
+};
+const fieldLabel = {
+  fontSize: 11,
+  color: "var(--ingredients-muted)",
+  marginBottom: 5,
+  fontWeight: 700,
+};
+const fieldLabelSm = {
+  fontSize: 10,
+  color: "var(--ingredients-muted)",
+  marginBottom: 4,
+  fontWeight: 700,
+};
+const input = {
+  width: "100%",
+  background: "var(--ingredients-input)",
+  border: "1px solid var(--ingredients-border-strong)",
+  borderRadius: 7,
+  padding: "7px 12px",
+  fontSize: 13,
+  color: "var(--ingredients-text)",
+  outline: "none",
+  boxSizing: "border-box",
+};
+const inputSm = {
+  width: "100%",
+  background: "var(--ingredients-input)",
+  border: "1px solid var(--ingredients-border-strong)",
+  borderRadius: 6,
+  padding: "6px 10px",
+  fontSize: 12,
+  color: "var(--ingredients-text)",
+  outline: "none",
+};
+const th = {
+  textAlign: "left",
+  fontSize: 10,
+  fontWeight: 800,
+  color: "var(--ingredients-soft)",
+  textTransform: "uppercase",
+  letterSpacing: ".06em",
+  padding: "11px 16px",
+  background: "var(--ingredients-table-head)",
+  borderBottom: "1px solid var(--ingredients-border)",
+};
+const thSm = {
+  textAlign: "left",
+  fontSize: 9,
+  fontWeight: 800,
+  color: "var(--ingredients-soft)",
+  textTransform: "uppercase",
+  letterSpacing: ".06em",
+  padding: "6px 8px",
+  borderBottom: "1px solid var(--ingredients-border)",
+};
+const td = {
+  padding: "11px 16px",
+  fontSize: 12,
+  color: "var(--ingredients-muted)",
+  borderBottom: "1px solid var(--ingredients-row-border)",
+};
+const tdSm = {
+  padding: "6px 8px",
+  fontSize: 12,
+  color: "var(--ingredients-muted)",
+  borderBottom: "1px solid var(--ingredients-row-border)",
+};
+const btnPrimary = {
+  background: "var(--ingredients-button)",
+  border: "none",
+  color: "#fff",
+  padding: "8px 20px",
+  borderRadius: 8,
+  fontSize: 12,
+  fontWeight: 800,
+  cursor: "pointer",
+  boxShadow: "var(--ingredients-button-shadow)",
+};
+const btnPrimarySm = {
+  background: "var(--ingredients-button)",
+  border: "none",
+  color: "#fff",
+  padding: "6px 14px",
+  borderRadius: 7,
+  fontSize: 11,
+  fontWeight: 800,
+  cursor: "pointer",
+};
+const btnSm = {
+  background: "var(--ingredients-button-soft)",
+  border: "1px solid var(--ingredients-border-strong)",
+  color: "var(--ingredients-muted-strong)",
+  padding: "4px 10px",
+  borderRadius: 6,
+  fontSize: 11,
+  cursor: "pointer",
+};
+const btnXs = {
+  background: "var(--ingredients-button-soft)",
+  border: "1px solid var(--ingredients-border-strong)",
+  color: "var(--ingredients-muted-strong)",
+  padding: "2px 8px",
+  borderRadius: 5,
+  fontSize: 10,
+  cursor: "pointer",
+};
+const btnIconSm = {
+  background: "var(--ingredients-button-soft)",
+  border: "1px solid var(--ingredients-border-strong)",
+  color: "var(--ingredients-muted-strong)",
+  minHeight: 24,
+  padding: "3px 9px",
+  borderRadius: 999,
+  fontSize: 10,
+  fontWeight: 800,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+};
+const badgeLocal = {
+  background: "var(--ingredients-badge-neutral-bg)",
+  color: "var(--ingredients-text)",
+  border: "1px solid var(--ingredients-border-strong)",
+  borderRadius: 999,
+  padding: "2px 7px",
+  fontSize: 10,
+  fontWeight: 600,
+};
+const badgeSeason = {
+  background: "var(--ingredients-badge-accent-bg)",
+  color: "var(--ingredients-accent)",
+  border: "1px solid var(--ingredients-accent-border)",
+  borderRadius: 999,
+  padding: "2px 7px",
+  fontSize: 10,
+  fontWeight: 600,
+};

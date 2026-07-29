@@ -1,0 +1,4232 @@
+import {
+  Award,
+  Building2,
+  Calendar,
+  Check,
+  Edit2,
+  Eye,
+  EyeOff,
+  Globe,
+  Key,
+  LayoutDashboard,
+  LogOut,
+  Plus,
+  ShieldCheck,
+  Trash2,
+  Users,
+  X,
+} from "./icons.jsx";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+
+import {
+  API_BASE_URL,
+  CATERING_SESSION_KEY,
+  apiDelete,
+  apiGet,
+  apiPost,
+  apiPut,
+} from "./api";
+import { isSupabaseConfigured, supabase } from "./supabase";
+import { useRealtimeData } from "./hooks/useRealtimeData";
+import { RealtimeIndicator } from "./components/RealtimeIndicator";
+import { RegisterRoleFields } from "./components/RegisterRoleFields";
+import { RoleAssignmentMatrix } from "./components/RoleAssignmentMatrix";
+import LoadingSpinner from "../../../../components/LoadingSpinner";
+import { getMenu, getMenus } from "../../../ai-menu-planner/api/aiMenuPlanner";
+import tabloDotLogo from "../../../../assets/tablo-dot-logo.png";
+
+const ROLE_LABELS = {
+  SUPER_ADMIN: "Süper Admin",
+  CATERING_ADMIN: "Catering Yöneticisi",
+  UNIVERSITY_ADMIN: "Üniversite Yöneticisi",
+  DIETITIAN: "Diyetisyen",
+  CHEF: "Şef",
+  FINANCE_MANAGER: "Finans Yöneticisi",
+  OPERATIONS_MANAGER: "Operasyon Yöneticisi",
+  STUDENT: "Öğrenci",
+  WAREHOUSE_STAFF: "Depo Görevlisi",
+  PURCHASING_STAFF: "Satın Alma Sorumlusu",
+  RESEARCHER: "Araştırmacı",
+  PARTNER_COMPANY: "Partner Firma",
+};
+
+const PUBLIC_REGISTER_ROLE_VALUES = [
+  "CATERING_ADMIN",
+  "UNIVERSITY_ADMIN",
+  "STUDENT",
+  "RESEARCHER",
+  "PARTNER_COMPANY",
+];
+
+const FALLBACK_REGISTER_ROLES = PUBLIC_REGISTER_ROLE_VALUES.map((role) => [
+  role,
+  ROLE_LABELS[role],
+]);
+
+const ROLE_ACCESS = {
+  dashboard: [
+    "SUPER_ADMIN",
+    "CATERING_ADMIN",
+    "UNIVERSITY_ADMIN",
+    "DIETITIAN",
+    "CHEF",
+    "FINANCE_MANAGER",
+    "OPERATIONS_MANAGER",
+    "STUDENT",
+    "WAREHOUSE_STAFF",
+    "PURCHASING_STAFF",
+    "RESEARCHER",
+    "PARTNER_COMPANY",
+  ],
+  universities: ["SUPER_ADMIN", "CATERING_ADMIN", "UNIVERSITY_ADMIN"],
+  users: [
+    "SUPER_ADMIN",
+    "CATERING_ADMIN",
+    "UNIVERSITY_ADMIN",
+  ],
+  menuAssignments: [
+    "SUPER_ADMIN",
+    "CATERING_ADMIN",
+    "UNIVERSITY_ADMIN",
+    "DIETITIAN",
+    "CHEF",
+  ],
+  companies: ["SUPER_ADMIN", "CATERING_ADMIN", "FINANCE_MANAGER"],
+  roles: ["SUPER_ADMIN", "CATERING_ADMIN"],
+};
+
+const ADMIN_DATA_ROLES = new Set([
+  "SUPER_ADMIN",
+  "CATERING_ADMIN",
+  "UNIVERSITY_ADMIN",
+  "DIETITIAN",
+  "CHEF",
+  "FINANCE_MANAGER",
+  "OPERATIONS_MANAGER",
+]);
+
+const USER_ROLE_OPTIONS = [
+  "SUPER_ADMIN",
+  "CATERING_ADMIN",
+  "UNIVERSITY_ADMIN",
+  "DIETITIAN",
+  "CHEF",
+  "FINANCE_MANAGER",
+  "OPERATIONS_MANAGER",
+  "STUDENT",
+  "WAREHOUSE_STAFF",
+  "PURCHASING_STAFF",
+  "RESEARCHER",
+  "PARTNER_COMPANY",
+];
+
+function getAssignableRoles(viewerRole) {
+  if (viewerRole === "SUPER_ADMIN") return USER_ROLE_OPTIONS;
+  if (viewerRole === "CATERING_ADMIN") {
+    return USER_ROLE_OPTIONS.filter(
+      (role) => role !== "SUPER_ADMIN",
+    );
+  }
+  if (viewerRole === "UNIVERSITY_ADMIN") {
+    return ["STUDENT", "DIETITIAN", "CHEF"];
+  }
+  return [];
+}
+
+function roleCan(role, key) {
+  return Boolean(
+    role && (role === "SUPER_ADMIN" || ROLE_ACCESS[key]?.includes(role)),
+  );
+}
+
+function GuardedCateringView({ role, accessKey, children }) {
+  if (!roleCan(role, accessKey)) {
+    return <Navigate to="/modules/catering-management" replace />;
+  }
+
+  return children;
+}
+
+function getCateringRouteKey(pathname) {
+  if (pathname.endsWith("/universities")) return "universities";
+  if (pathname.endsWith("/users")) return "users";
+  if (pathname.endsWith("/menu-assignments")) return "menuAssignments";
+  if (pathname.endsWith("/companies")) return "companies";
+  if (pathname.endsWith("/roles")) return "roles";
+  return "dashboard";
+}
+
+function canLoadAdminData(role) {
+  return ADMIN_DATA_ROLES.has(role);
+}
+
+function getPasswordStrength(password) {
+  const checks = [
+    password.length >= 8,
+    /[a-z]/.test(password) && /[A-Z]/.test(password),
+    /\d/.test(password),
+    /[^A-Za-z0-9]/.test(password),
+  ];
+  const score = checks.filter(Boolean).length;
+  const labels = ["Çok zayıf", "Zayıf", "Orta", "İyi", "Güçlü"];
+  const colors = ["#ef4444", "#f97316", "#f59e0b", "#22c55e", "#16a34a"];
+  const suggestions = [];
+
+  if (password.length < 8) suggestions.push("8+ karakter kullan");
+  if (!(/[a-z]/.test(password) && /[A-Z]/.test(password)))
+    suggestions.push("Büyük/küçük harf ekle");
+  if (!/\d/.test(password)) suggestions.push("Rakam ekle");
+  if (!/[^A-Za-z0-9]/.test(password)) suggestions.push("Sembol ekle");
+
+  return {
+    score,
+    label: password ? labels[score] : "Şifre gücü",
+    color: password ? colors[score] : "var(--border2)",
+    suggestions,
+  };
+}
+
+function PasswordStrength({ password }) {
+  const strength = getPasswordStrength(password);
+  return (
+    <div style={{ display: "grid", gap: 7, marginTop: -4 }}>
+      <div
+        style={{
+          height: 7,
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 5,
+        }}
+      >
+        {[1, 2, 3, 4].map((level) => (
+          <span
+            key={level}
+            style={{
+              borderRadius: 999,
+              background:
+                strength.score >= level ? strength.color : "var(--surface3)",
+              transition: "background .18s ease",
+            }}
+          />
+        ))}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 12,
+          fontSize: 11,
+          color: "var(--text3)",
+        }}
+      >
+        <strong style={{ color: strength.color }}>{strength.label}</strong>
+        <span>
+          {strength.suggestions.slice(0, 2).join(" · ") ||
+            "Bu şifre gayet iyi görünüyor."}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function getRegisterValidation({
+  companyName,
+  fullName,
+  email,
+  password,
+  confirmPassword,
+  acceptedTerms,
+}) {
+  const errors = [];
+  const strength = getPasswordStrength(password);
+
+  if (companyName.trim().length < 2) errors.push("Firma adını girin.");
+  if (fullName.trim().length < 2) errors.push("Ad soyad bilgisini girin.");
+  if (!isValidEmail(email)) errors.push("Geçerli bir e-posta girin.");
+  if (password.length < 6) errors.push("Şifre en az 6 karakter olmalı.");
+  if (strength.score < 2) errors.push("Daha güçlü bir şifre seçin.");
+  if (password !== confirmPassword) errors.push("Şifreler eşleşmiyor.");
+  if (!acceptedTerms) errors.push("Kullanım şartlarını onaylayın.");
+
+  return errors;
+}
+
+function getRoleAwareRegisterValidation({
+  registerRole,
+  companyName,
+  fullName,
+  firstName,
+  lastName,
+  nationalId,
+  age,
+  universityId,
+  phone,
+  organizationName,
+  partnerCompanyName,
+  brandName,
+  email,
+  password,
+  confirmPassword,
+  acceptedTerms,
+}) {
+  const errors = [];
+  const strength = getPasswordStrength(password);
+
+  if (registerRole === "CATERING_ADMIN" && companyName.trim().length < 2) {
+    errors.push("Firma adını girin.");
+  }
+  if (registerRole === "STUDENT") {
+    if (firstName.trim().length < 2) errors.push("Ad bilgisini girin.");
+    if (lastName.trim().length < 2) errors.push("Soyad bilgisini girin.");
+    if (!/^\d{11}$/.test(nationalId.trim())) errors.push("11 haneli T.C. kimlik no girin.");
+    if (!age || Number(age) <= 0) errors.push("Geçerli bir yaş girin.");
+    if (!universityId) errors.push("Üniversite seçin.");
+  } else if (fullName.trim().length < 2) {
+    errors.push("Ad soyad bilgisini girin.");
+  }
+  if (registerRole === "UNIVERSITY_ADMIN" && !universityId) {
+    errors.push("Üniversite seçin.");
+  }
+  if (registerRole === "RESEARCHER") {
+    if (organizationName.trim().length < 2) errors.push("Kurum / üniversite bilgisini girin.");
+  }
+  if (registerRole === "PARTNER_COMPANY") {
+    if (partnerCompanyName.trim().length < 2) errors.push("Partner firma adını girin.");
+    if (brandName.trim().length < 2) errors.push("Marka adını girin.");
+  }
+  if (phone && !/^0\d{10}$/.test(phone.replace(/\D/g, ""))) {
+    errors.push("Telefon numarasını 05555555555 formatında girin.");
+  }
+  if (!isValidEmail(email)) errors.push("Geçerli bir e-posta girin.");
+  if (password.length < 6) errors.push("Şifre en az 6 karakter olmalı.");
+  if (strength.score < 2) errors.push("Daha güçlü bir şifre seçin.");
+  if (password !== confirmPassword) errors.push("Şifreler eşleşmiyor.");
+  if (!acceptedTerms) errors.push("Kullanım şartlarını onaylayın.");
+
+  return errors;
+}
+
+function PasswordField({
+  label,
+  value,
+  onChange,
+  visible,
+  onToggle,
+  placeholder,
+  autoComplete,
+}) {
+  return (
+    <div className="input-group">
+      <label>{label}</label>
+      <div className="password-field">
+        <input
+          type={visible ? "text" : "password"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+        />
+        <button
+          type="button"
+          className="password-toggle"
+          onClick={onToggle}
+          title={visible ? "Şifreyi gizle" : "Şifreyi göster"}
+          aria-label={visible ? "Şifreyi gizle" : "Şifreyi göster"}
+        >
+          {visible ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const DASH_COLORS = [
+  "#2563eb",
+  "#16a34a",
+  "#f97316",
+  "#dc2626",
+  "#7c3aed",
+  "#0891b2",
+  "#db2777",
+  "#65a30d",
+];
+const WEEK_DAYS = ["Pzt", "Sal", "Çar", "Per", "Cum"];
+const MENU_CALENDAR_DAYS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
+const MENU_CALENDAR_DAYS_SHORT = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+const TR_MONTHS_SHORT = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+
+function formatTRNumber(value) {
+  return Number(value || 0).toLocaleString("tr-TR");
+}
+
+function formatMenuDateShort(date) {
+  return `${String(date.getDate()).padStart(2, "0")} ${TR_MONTHS_SHORT[date.getMonth()]}`;
+}
+
+function startOfDay(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function sameDay(a, b) {
+  return startOfDay(a).getTime() === startOfDay(b).getTime();
+}
+
+function mondayOf(date) {
+  const d = startOfDay(date);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d;
+}
+
+function isoLocal(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function addDaysIso(dateString, days) {
+  if (!dateString) return "";
+  const date = new Date(`${dateString}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return isoLocal(date);
+}
+
+function getWeeklyMenuStatusLabel(status) {
+  return String(status).toLowerCase() === "approved" ? "Onaylandı" : "Taslak";
+}
+
+function formatWeeklyMenuLabel(menu) {
+  if (!menu) return "Menü seçilmedi";
+  const start = new Date(`${menu.week_start_date}T00:00:00`);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return `${formatMenuDateShort(start)} - ${formatMenuDateShort(end)} | ${getWeeklyMenuStatusLabel(menu.status)} | Bütçe ${Number(menu.budget || 0).toFixed(0)} TL`;
+}
+
+function sortWeeklyMenus(menus) {
+  return [...(menus || [])].sort((a, b) => {
+    const dateDiff = new Date(`${b.week_start_date}T00:00:00`) - new Date(`${a.week_start_date}T00:00:00`);
+    if (dateDiff !== 0) return dateDiff;
+    return Number(b.id || 0) - Number(a.id || 0);
+  });
+}
+
+function pickRepresentativeMenu(menusForWeek) {
+  return [...menusForWeek].sort((a, b) => {
+    if (a.status !== b.status) {
+      return String(a.status).toLowerCase() === "approved" ? -1 : 1;
+    }
+    const ai = a.items?.length || 0;
+    const bi = b.items?.length || 0;
+    if (ai !== bi) return bi - ai;
+    return Number(b.id || 0) - Number(a.id || 0);
+  })[0];
+}
+
+function getMenuDayStats(items, day) {
+  const dayItems = (items || []).filter((item) => item.day_of_week === day);
+  let totalCost = 0;
+  let portions = null;
+  const mealNames = [];
+
+  dayItems.forEach((item) => {
+    if (item.portions) {
+      totalCost += (item.estimated_cost || 0) * item.portions;
+      portions = Math.max(portions || 0, item.portions);
+    } else {
+      totalCost += item.estimated_cost || 0;
+    }
+    if (item.meal_name && !mealNames.includes(item.meal_name)) {
+      mealNames.push(item.meal_name);
+    }
+  });
+
+  const perPerson = portions ? totalCost / portions : null;
+  return { mealNames, totalCost, portions, perPerson };
+}
+
+function digitsOnly(value, maxLength) {
+  const digits = String(value).replace(/\D/g, "");
+  return typeof maxLength === "number" ? digits.slice(0, maxLength) : digits;
+}
+
+function integerInputValue(value, { min = 0, max } = {}) {
+  const digits = digitsOnly(value);
+  if (!digits) return "";
+  const normalizedDigits = digits.replace(/^0+(?=\d)/, "");
+  const nextValue = Math.max(min, Number(normalizedDigits));
+  return typeof max === "number" ? Math.min(max, nextValue) : nextValue;
+}
+
+function nextSteppedValue(value, step, { min = 0, max } = {}) {
+  const base = value === "" ? min : Number(value);
+  const safeBase = Number.isFinite(base) ? base : min;
+  const nextValue = Math.max(min, safeBase + step);
+  return typeof max === "number" ? Math.min(max, nextValue) : nextValue;
+}
+
+function positiveInt(value, fallback = 1) {
+  const nextValue = Number(value);
+  return Number.isFinite(nextValue) && nextValue > 0 ? nextValue : fallback;
+}
+
+function nonNegativeInt(value, fallback = 0) {
+  const nextValue = Number(value);
+  return Number.isFinite(nextValue) && nextValue >= 0 ? nextValue : fallback;
+}
+
+function licenseMatchesForm(license, form) {
+  return (
+    license.plan_name === form.plan_name &&
+    Number(license.max_users) === positiveInt(form.max_users, 1) &&
+    Number(license.max_universities) ===
+      positiveInt(form.max_universities, 1) &&
+    license.start_date === form.start_date &&
+    license.expire_date === form.expire_date &&
+    Boolean(license.status) === Boolean(form.status)
+  );
+}
+
+function NumericStepper({ value, onChange, min = 0, max, placeholder = "0" }) {
+  return (
+    <div className="numeric-stepper">
+      <input
+        type="text"
+        inputMode="numeric"
+        value={value}
+        onChange={(e) =>
+          onChange(integerInputValue(e.target.value, { min, max }))
+        }
+        onFocus={(e) => {
+          if (String(value) === String(min)) {
+            onChange("");
+          }
+          e.target.select();
+        }}
+        onBlur={() => {
+          if (value === "") {
+            onChange(min);
+          }
+        }}
+        placeholder={placeholder}
+      />
+      <div className="numeric-stepper-actions">
+        <button
+          type="button"
+          onClick={() => onChange(nextSteppedValue(value, 1, { min, max }))}
+          aria-label="Artır"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(nextSteppedValue(value, -1, { min, max }))}
+          aria-label="Azalt"
+        >
+          -
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DashboardMetricCard({ tone, label, value, sub, children }) {
+  return (
+    <article className={`catering-dash-metric ${tone}`}>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+        {sub && <small>{sub}</small>}
+      </div>
+      {children && <div className="catering-dash-metric-art">{children}</div>}
+    </article>
+  );
+}
+
+function DashboardPanel({ title, meta, children, className = "" }) {
+  return (
+    <section className={`catering-dash-panel ${className}`}>
+      <div className="catering-dash-panel-head">
+        <h3>{title}</h3>
+        {meta && <span>{meta}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function CapacityLineChart({ totalStudents, activeUsers }) {
+  const maxValue = Math.max(totalStudents, activeUsers, 1);
+  const studentPoints = [
+    0,
+    0,
+    0,
+    0,
+    0,
+    Math.max(6, 290 * (totalStudents / maxValue)),
+  ];
+  const userY = 294 - Math.max(2, 290 * (activeUsers / maxValue));
+  const studentPath = studentPoints
+    .map((value, index) => {
+      const x = 24 + index * 154;
+      const y = 294 - value;
+      return `${index === 0 ? "M" : "L"}${x},${y}`;
+    })
+    .join(" ");
+  const areaPath = `${studentPath} L794,294 L24,294 Z`;
+
+  return (
+    <div className="capacity-chart">
+      <svg viewBox="0 0 820 320" preserveAspectRatio="none">
+        {[0, 1, 2, 3, 4].map((row) => (
+          <line
+            key={row}
+            x1="24"
+            x2="794"
+            y1={36 + row * 64}
+            y2={36 + row * 64}
+          />
+        ))}
+        {[0, 1, 2, 3, 4].map((row) => {
+          const value = Math.round(maxValue - (maxValue / 4) * row);
+          return (
+            <text key={row} x="0" y={40 + row * 64}>
+              {formatTRNumber(value)}
+            </text>
+          );
+        })}
+        <path className="chart-area" d={areaPath} />
+        <path className="chart-line student" d={studentPath} />
+        <path className="chart-line user" d={`M24,${userY} L794,${userY}`} />
+      </svg>
+    </div>
+  );
+}
+
+function RoleWaveChart({ activeUsers }) {
+  return (
+    <div className="role-wave">
+      <svg viewBox="0 0 420 190" preserveAspectRatio="none">
+        <path
+          className="role-wave-fill"
+          d="M0,128 C45,155 78,105 126,92 C171,80 178,116 220,82 C252,56 269,20 315,34 C356,47 352,113 420,74 L420,190 L0,190 Z"
+        />
+        <path
+          className="role-wave-line"
+          d="M0,128 C45,155 78,105 126,92 C171,80 178,116 220,82 C252,56 269,20 315,34 C356,47 352,113 420,74"
+        />
+        <circle cx="288" cy="36" r="12" />
+      </svg>
+      <div className="role-wave-footer">Aktif kullanıcı: {activeUsers}</div>
+    </div>
+  );
+}
+
+function RoleDistributionChart({ users }) {
+  const roleCounts = users.reduce((acc, user) => {
+    const role = user.role_name || "UNKNOWN";
+    acc[role] = (acc[role] || 0) + 1;
+    return acc;
+  }, {});
+  const items = Object.entries(roleCounts)
+    .map(([role, value]) => ({
+      role,
+      label: ROLE_LABELS[role] || role,
+      value,
+      active: users.filter((user) => user.role_name === role && user.is_active)
+        .length,
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 6);
+  const max = Math.max(...items.map((item) => item.value), 1);
+
+  if (!items.length) {
+    return <div className="chart-empty">Kullanıcı verisi yok.</div>;
+  }
+
+  return (
+    <div className="role-bars">
+      {items.map((item, index) => (
+        <div key={item.role} className="role-bar-row">
+          <div className="role-bar-head">
+            <span>{item.label}</span>
+            <b>{item.value}</b>
+          </div>
+          <div className="role-bar-track">
+            <span
+              style={{
+                width: `${Math.max(7, (item.value / max) * 100)}%`,
+                background: DASH_COLORS[index % DASH_COLORS.length],
+              }}
+            />
+          </div>
+          <small>{item.active} aktif</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DonutChart({ items, total, center, emptyText }) {
+  if (!items.length || total <= 0) {
+    return <div className="chart-empty">{emptyText}</div>;
+  }
+
+  let offset = 25;
+  return (
+    <div className="donut-layout">
+      <svg className="donut" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="42" />
+        {items.map((item, index) => {
+          const dash = (item.value / total) * 264;
+          const node = (
+            <circle
+              key={item.name}
+              cx="60"
+              cy="60"
+              r="42"
+              stroke={DASH_COLORS[index % DASH_COLORS.length]}
+              strokeDasharray={`${dash} ${264 - dash}`}
+              strokeDashoffset={offset}
+            />
+          );
+          offset -= dash;
+          return node;
+        })}
+        {center && (
+          <text x="60" y="58" textAnchor="middle">
+            {center.title}
+          </text>
+        )}
+        {center && (
+          <text
+            x="60"
+            y="76"
+            textAnchor="middle"
+            className="donut-center-value"
+          >
+            {center.value}
+          </text>
+        )}
+      </svg>
+      <div className="donut-legend">
+        {items.slice(0, 5).map((item, index) => (
+          <div key={item.name}>
+            <i
+              style={{ background: DASH_COLORS[index % DASH_COLORS.length] }}
+            />
+            <span>{item.name}</span>
+            <b>{Math.round((item.value / total) * 100)}%</b>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MenuBars({ menuAssignments }) {
+  const counts = WEEK_DAYS.map((_, index) => {
+    return menuAssignments.filter((menu) => {
+      const day = new Date(menu.start_date).getDay();
+      return day === index + 1;
+    }).length;
+  });
+  const max = Math.max(...counts, 1);
+
+  if (!counts.some(Boolean)) {
+    return <div className="chart-empty">Menü ataması verisi yok.</div>;
+  }
+
+  return (
+    <div className="menu-bars">
+      {counts.map((value, index) => (
+        <div key={WEEK_DAYS[index]} className="menu-bar-col">
+          <strong>{value}</strong>
+          <div className="menu-bar-track">
+            <span
+              style={{
+                height: value ? `${Math.max(8, (value / max) * 100)}%` : "0%",
+              }}
+            />
+          </div>
+          <small>{WEEK_DAYS[index]}</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StudentDashboard({ currentUser }) {
+  return (
+    <>
+      <header className="content-header catering-dash-header student-dash-header">
+        <div>
+          <h1>Öğrenci Paneli</h1>
+          <p>Haftalık yemekhane menüsünü ve öğrenci hesabınızı buradan takip edin.</p>
+        </div>
+      </header>
+
+      <div className="student-dashboard-shell">
+        <section className="student-welcome-card">
+          <div>
+            <span>Hoş geldin</span>
+            <strong>{currentUser?.full_name || "Öğrenci"}</strong>
+            <p>Bu haftanın yemekhane menüsü aşağıda öne çıkarılır.</p>
+          </div>
+          <div className="student-profile-chip">
+            <Users size={18} />
+            <span>{ROLE_LABELS[currentUser?.role_name] || "Öğrenci"}</span>
+          </div>
+        </section>
+
+        <div className="student-quick-grid">
+          <article>
+            <Calendar size={20} />
+            <div>
+              <span>Menü Takvimi</span>
+              <strong>Haftalık görünüm</strong>
+            </div>
+          </article>
+          <article>
+            <ShieldCheck size={20} />
+            <div>
+              <span>Hesap Durumu</span>
+              <strong>{currentUser?.is_active ? "Aktif" : "Pasif"}</strong>
+            </div>
+          </article>
+          <article>
+            <Building2 size={20} />
+            <div>
+              <span>Üniversite Bağlantısı</span>
+              <strong>{currentUser?.university_id ? "Tanımlı" : "Bekliyor"}</strong>
+            </div>
+          </article>
+        </div>
+
+        <WeeklyMenuCalendar assignedOnly />
+      </div>
+    </>
+  );
+}
+
+function FocusedRoleDashboard({ currentUser }) {
+  const roleName = currentUser?.role_name;
+  const copy = {
+    RESEARCHER: {
+      title: "Araştırmacı Paneli",
+      description: "Araştırma çıktıları ve veri dışa aktarım süreçleri için ilgili modülleri kullanın.",
+      primary: "Araştırma dışa aktarımları",
+      secondary: "Anonim veri akışları",
+    },
+    PARTNER_COMPANY: {
+      title: "Partner Firma Paneli",
+      description: "Ürün kataloğu ve tedarik süreçleri için partner ürünleri modülünü kullanın.",
+      primary: "Partner ürünleri",
+      secondary: "Tedarik görünümü",
+    },
+    WAREHOUSE_STAFF: {
+      title: "Depo Paneli",
+      description: "Stok ve depo hareketleri için malzeme deposu ekranını kullanın.",
+      primary: "Stok / depo",
+      secondary: "Malzeme takibi",
+    },
+    PURCHASING_STAFF: {
+      title: "Satın Alma Paneli",
+      description: "Sipariş, satın alma ve tedarik süreçleri için ilgili kayıt ve modülleri kullanın.",
+      primary: "Siparişler",
+      secondary: "Tedarik ürünleri",
+    },
+  }[roleName];
+
+  if (!copy) return null;
+
+  return (
+    <>
+      <header className="content-header catering-dash-header student-dash-header">
+        <div>
+          <h1>{copy.title}</h1>
+          <p>{copy.description}</p>
+        </div>
+      </header>
+      <div className="student-dashboard-shell">
+        <section className="student-welcome-card">
+          <div>
+            <span>Rolünüz</span>
+            <strong>{ROLE_LABELS[roleName] || roleName}</strong>
+            <p>{copy.description}</p>
+          </div>
+          <div className="student-profile-chip">
+            <Key size={18} />
+            <span>Yetkili görünüm</span>
+          </div>
+        </section>
+        <div className="student-quick-grid">
+          <article>
+            <ShieldCheck size={20} />
+            <div>
+              <span>Birincil alan</span>
+              <strong>{copy.primary}</strong>
+            </div>
+          </article>
+          <article>
+            <Globe size={20} />
+            <div>
+              <span>İkincil alan</span>
+              <strong>{copy.secondary}</strong>
+            </div>
+          </article>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function WeeklyMenuCalendar({ assignedOnly = false } = {}) {
+  const [menusDetailed, setMenusDetailed] = useState(null);
+  const [error, setError] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const scrollerRef = useRef(null);
+  const currentWeekRef = useRef(null);
+  const dragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0, moved: false });
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadMenus() {
+      try {
+        let menuIds;
+        if (assignedOnly) {
+          const assignments = await apiGet("/menu-assignments");
+          menuIds = [
+            ...new Set(
+              assignments
+                .filter(
+                  (assignment) =>
+                    assignment.weekly_menu_id &&
+                    assignment.is_published &&
+                    String(assignment.status).toUpperCase() === "ACTIVE",
+                )
+                .map((assignment) => Number(assignment.weekly_menu_id)),
+            ),
+          ];
+        } else {
+          const list = await getMenus();
+          menuIds = list.map((menu) => menu.id);
+        }
+
+        if (!menuIds.length) {
+          if (active) setMenusDetailed([]);
+          return;
+        }
+
+        const results = await Promise.allSettled(
+          menuIds.map((menuId) => getMenu(menuId)),
+        );
+        if (!active) return;
+        setMenusDetailed(
+          results
+            .filter((result) => result.status === "fulfilled")
+            .map((result) => result.value),
+        );
+      } catch {
+        if (!active) return;
+        setError(true);
+        setMenusDetailed([]);
+      }
+    }
+
+    loadMenus();
+
+    return () => {
+      active = false;
+    };
+  }, [assignedOnly]);
+
+  const weekCards = useMemo(() => {
+    if (!menusDetailed) return [];
+    const byWeek = new Map();
+
+    menusDetailed.forEach((menu) => {
+      if (!menu.week_start_date) return;
+      const key = isoLocal(mondayOf(new Date(`${menu.week_start_date}T00:00:00`)));
+      if (!byWeek.has(key)) byWeek.set(key, []);
+      byWeek.get(key).push(menu);
+    });
+
+    const today = startOfDay(new Date());
+    const cards = Array.from(byWeek.entries())
+      .map(([weekStartStr, menusForWeek]) => {
+        const menu = pickRepresentativeMenu(menusForWeek);
+        const weekStart = startOfDay(new Date(`${weekStartStr}T00:00:00`));
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        return {
+          menu,
+          weekStart,
+          weekEnd,
+          isCurrent: today >= weekStart && today <= weekEnd,
+          isPast: today > weekEnd,
+        };
+      })
+      .sort((a, b) => a.weekStart - b.weekStart);
+
+    if (!cards.length) return [];
+
+    const currentIndex = cards.findIndex((card) => card.isCurrent);
+    const upcomingIndex = cards.findIndex((card) => card.weekStart > today);
+    const focusIndex = currentIndex >= 0
+      ? currentIndex
+      : upcomingIndex >= 0
+        ? upcomingIndex
+        : cards.length - 1;
+
+    // Kartlar kronolojik (eskiden yeniye) kalır; odaklanan haftayı başa ÇEKMEYİZ,
+    // yoksa sağa kaydırınca "27 Tem - 2 Ağu" sonra "6-12 Tem" gibi geriye zıplar.
+    // Odaklanan haftaya konumlanmayı zaten aşağıdaki useEffect (scrollToFocusedWeek) yapıyor.
+    return cards.map((card, index) => ({ ...card, isFocused: index === focusIndex }));
+  }, [menusDetailed]);
+
+  useEffect(() => {
+    if (!weekCards.length) return;
+    let retryId;
+    const scrollToFocusedWeek = () => {
+      const card = currentWeekRef.current;
+      const scroller = scrollerRef.current;
+      if (!card || !scroller) return;
+      scroller.scrollTo({
+        left: card.offsetLeft - (scroller.clientWidth - card.clientWidth) / 2,
+        behavior: "auto",
+      });
+    };
+    const frame = requestAnimationFrame(() => {
+      scrollToFocusedWeek();
+      retryId = window.setTimeout(scrollToFocusedWeek, 80);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      if (retryId) window.clearTimeout(retryId);
+    };
+  }, [weekCards.length]);
+
+  const beginDrag = (pageX) => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    dragRef.current = {
+      isDown: true,
+      startX: pageX,
+      scrollLeft: scroller.scrollLeft,
+      moved: false,
+    };
+    setIsDragging(true);
+  };
+
+  const moveDrag = (pageX) => {
+    if (!dragRef.current.isDown) return;
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const dx = pageX - dragRef.current.startX;
+    if (Math.abs(dx) > 4) dragRef.current.moved = true;
+    scroller.scrollLeft = dragRef.current.scrollLeft - dx;
+  };
+
+  const handleMouseDown = (event) => {
+    if (event.button !== 0) return;
+    beginDrag(event.pageX);
+  };
+
+  const handleMouseMove = (event) => {
+    if (!dragRef.current.isDown) return;
+    moveDrag(event.pageX);
+  };
+
+  const handleTouchStart = (event) => {
+    beginDrag(event.touches[0].pageX);
+  };
+
+  const handleTouchMove = (event) => {
+    if (!dragRef.current.isDown) return;
+    moveDrag(event.touches[0].pageX);
+  };
+
+  const endDrag = () => {
+    dragRef.current.isDown = false;
+    setIsDragging(false);
+  };
+
+  return (
+    <section className="weekly-menu-calendar-section">
+      <div className="weekly-menu-calendar-heading">
+        <h2>Haftalık Menü Takvimi</h2>
+        <span>Yatay kaydırarak önceki ve sonraki haftaları inceleyin</span>
+      </div>
+
+      {menusDetailed === null ? (
+        <div className="weekly-menu-calendar-state">
+          <LoadingSpinner label="Haftalık menü yükleniyor" minHeight={130} size={38} />
+        </div>
+      ) : error || weekCards.length === 0 ? (
+        <div className="weekly-menu-calendar-state">
+          {assignedOnly
+            ? "Henüz yayınlanmış yemekhane menüsü bulunamadı."
+            : "Henüz oluşturulmuş haftalık menü bulunamadı."}
+        </div>
+      ) : (
+        <div
+          ref={scrollerRef}
+          className="weekly-menu-calendar-rail no-scrollbar"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={endDrag}
+          onMouseLeave={endDrag}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={endDrag}
+          onTouchCancel={endDrag}
+          style={{
+            display: "flex",
+            gap: 16,
+            overflowX: "auto",
+            padding: "18px 0 12px",
+            cursor: isDragging ? "grabbing" : "grab",
+            userSelect: isDragging ? "none" : "auto",
+            scrollSnapType: isDragging ? "none" : "x proximity",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
+        >
+          {weekCards.map(({ menu, weekStart, weekEnd, isCurrent, isPast, isFocused }) => (
+            <article
+              key={menu.id}
+              ref={isFocused ? currentWeekRef : null}
+              className={`weekly-menu-card${isCurrent ? " current" : ""}${isPast && !isCurrent ? " past" : ""}${isFocused ? " focused" : ""}`}
+              style={{
+                scrollSnapAlign: "center",
+              }}
+            >
+              {isCurrent && <div className="weekly-menu-badge">BU HAFTA</div>}
+              <div className="weekly-menu-card-head">
+                <strong>
+                  {formatMenuDateShort(weekStart)} - {formatMenuDateShort(weekEnd)}
+                </strong>
+                <span>
+                  {String(menu.status).toLowerCase() === "approved" ? "Onaylandı" : "Taslak"} · Bütçe {Number(menu.budget || 0).toFixed(0)} TL
+                </span>
+              </div>
+
+              <div className="weekly-menu-days">
+                {MENU_CALENDAR_DAYS.map((day, index) => {
+                  const dayDate = new Date(weekStart);
+                  dayDate.setDate(dayDate.getDate() + index);
+                  const isToday = sameDay(dayDate, new Date());
+                  const { mealNames, totalCost, portions, perPerson } = getMenuDayStats(menu.items, day);
+
+                  return (
+                    <div key={day} className={`weekly-menu-day${isToday ? " today" : ""}`}>
+                      <div className="weekly-menu-day-head">
+                        <span>{MENU_CALENDAR_DAYS_SHORT[index]}</span>
+                        <span>
+                          {String(dayDate.getDate()).padStart(2, "0")}.{String(dayDate.getMonth() + 1).padStart(2, "0")}
+                        </span>
+                      </div>
+                      <div className="weekly-menu-meals">
+                        {mealNames.length === 0 ? (
+                          <span className="weekly-menu-empty">-</span>
+                        ) : (
+                          <ul>
+                            {mealNames.map((name) => (
+                              <li key={name}>{name}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <div className="weekly-menu-day-foot">
+                        <span>{portions ?? "-"} kişi</span>
+                        <span>{totalCost.toFixed(0)} TL</span>
+                        <span>{perPerson !== null ? `${perPerson.toFixed(2)} TL/kişi` : "-"}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CateringDashboard({
+  dashboard,
+  universities,
+  users,
+  menuAssignments,
+  dateFilter,
+  onDateFilterToggle,
+  companyFilter,
+  onCompanyFilterChange,
+  companies,
+  currentUser,
+}) {
+  if (currentUser?.role_name === "STUDENT") {
+    return <StudentDashboard currentUser={currentUser} />;
+  }
+
+  if (["RESEARCHER", "PARTNER_COMPANY", "WAREHOUSE_STAFF", "PURCHASING_STAFF"].includes(currentUser?.role_name)) {
+    return <FocusedRoleDashboard currentUser={currentUser} />;
+  }
+
+  const totalStudents = universities.reduce(
+    (sum, university) => sum + Number(university.student_count || 0),
+    0,
+  );
+  const activeUsers = users.filter((user) => user.is_active).length;
+  const inactiveUsers = Math.max(users.length - activeUsers, 0);
+  const activeMenus = menuAssignments.filter(
+    (menu) => menu.status === "ACTIVE",
+  ).length;
+  const publishedMenus = menuAssignments.filter(
+    (menu) => menu.is_published,
+  ).length;
+  const universityCount =
+    companyFilter === "all"
+      ? (dashboard?.total_universities ?? universities.length)
+      : universities.length;
+  const universityItems = universities
+    .filter((university) => Number(university.student_count || 0) > 0)
+    .map((university) => ({
+      name: university.university_name,
+      value: Number(university.student_count || 0),
+    }))
+    .sort((a, b) => b.value - a.value);
+  const userItems = [
+    { name: "Aktif", value: activeUsers },
+    { name: "Pasif", value: inactiveUsers },
+  ].filter((item) => item.value > 0);
+
+  return (
+    <>
+      <header className="content-header catering-dash-header">
+        <div>
+          <h1>Genel Bakış</h1>
+          <p>Firma, lisans, kullanıcı ve menü operasyonları tek ekranda.</p>
+        </div>
+        <div className="catering-dash-filters">
+          <button
+            type="button"
+            className={dateFilter === "30d" ? "active" : ""}
+            onClick={onDateFilterToggle}
+          >
+            <Calendar size={14} />{" "}
+            {dateFilter === "30d" ? "Son 30 gün" : "Tüm zamanlar"}
+          </button>
+          {currentUser?.role_name === "SUPER_ADMIN" && companies?.length > 0 ? (
+            <select
+              className="dash-company-select"
+              value={companyFilter}
+              onChange={(e) => onCompanyFilterChange(e.target.value)}
+            >
+              <option value="all">Tüm firmalar</option>
+              {companies.map((c) => (
+                <option key={c.id} value={String(c.id)}>
+                  {c.company_name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <button type="button" style={{ cursor: "default", opacity: 0.7 }}>
+              {companies?.[0]?.company_name || "Tüm firmalar"}
+            </button>
+          )}
+          <button type="button">
+            Lisans {dashboard?.active_license ? "aktif" : "pasif"}
+          </button>
+        </div>
+      </header>
+
+      <div className="catering-dash-shell">
+        <div className="catering-dash-metrics">
+          <DashboardMetricCard
+            tone="student"
+            label="Toplam Öğrenci"
+            value={formatTRNumber(totalStudents)}
+            sub={`${universityCount} Üniversite kaydı`}
+          >
+            <Building2 size={24} />
+          </DashboardMetricCard>
+          <DashboardMetricCard
+            tone="menu"
+            label="Aktif Menü"
+            value={formatTRNumber(activeMenus)}
+            sub={`${publishedMenus} yayınlanan menü`}
+          >
+            <Calendar size={24} />
+          </DashboardMetricCard>
+          <DashboardMetricCard
+            tone="users"
+            label="Kullanıcılar"
+            value={`${activeUsers}`}
+            sub={`${activeUsers} aktif`}
+          >
+            <Users size={24} />
+          </DashboardMetricCard>
+          <DashboardMetricCard
+            tone="license"
+            label="Lisans"
+            value={dashboard?.active_license ? "Aktif" : "Pasif"}
+            sub={
+              dashboard?.license_days_left != null
+                ? `${dashboard.license_days_left} gün kaldı`
+                : "Süre bilgisi yok"
+            }
+          >
+            <Award size={24} />
+          </DashboardMetricCard>
+        </div>
+
+        <WeeklyMenuCalendar />
+
+        <div className="catering-dash-grid">
+          <DashboardPanel
+            title="Öğrenci Kapasitesi ve Aktif Kullanıcı"
+            className="wide"
+          >
+            <CapacityLineChart
+              totalStudents={totalStudents}
+              activeUsers={activeUsers}
+            />
+          </DashboardPanel>
+          <DashboardPanel title="Roller ve Kullanıcılar">
+            <RoleDistributionChart users={users} />
+          </DashboardPanel>
+          <DashboardPanel
+            title="Üniversite Dağılımı"
+            meta={`${formatTRNumber(totalStudents)} Öğrenci`}
+          >
+            <DonutChart
+              items={universityItems}
+              total={totalStudents}
+              emptyText="Üniversite/Öğrenci verisi yok."
+            />
+          </DashboardPanel>
+          <DashboardPanel
+            title="Kullanıcı Durumu"
+            meta={`${users.length} kullanıcı`}
+          >
+            <DonutChart
+              items={userItems}
+              total={Math.max(users.length, 1)}
+              center={{ title: "Aktif", value: activeUsers }}
+              emptyText="Kullanıcı verisi yok."
+            />
+          </DashboardPanel>
+          <DashboardPanel title="Menü Atamaları / Gün" className="full">
+            <MenuBars menuAssignments={menuAssignments} />
+          </DashboardPanel>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function RoleAssignmentsView({ users, universities, currentUser, onEditUser }) {
+  return (
+    <>
+      <header className="content-header">
+        <div>
+          <h1>Rol Atamaları</h1>
+          <p>
+            Public kayıt rollerini, iç atama kurallarını ve mevcut kullanıcı
+            rollerini tek ekranda inceleyin.
+          </p>
+        </div>
+      </header>
+
+      <RoleAssignmentMatrix
+        roleLabels={ROLE_LABELS}
+        viewerRole={currentUser?.role_name}
+      />
+
+      <section className="table-card role-current-assignments">
+        <div className="table-toolbar">
+          <div>
+            <h3>Mevcut Kullanıcı Rolleri</h3>
+            <p>Kullanıcının rolünü değiştirmek için düzenle aksiyonunu kullanın.</p>
+          </div>
+          <span className="table-count">{users.length} kullanıcı</span>
+        </div>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Kullanıcı</th>
+                <th>Rol</th>
+                <th>Üniversite</th>
+                <th>Durum</th>
+                <th className="actions-col">İşlem</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center">
+                    Kullanıcı kaydı bulunamadı.
+                  </td>
+                </tr>
+              ) : (
+                users.map((user) => {
+                  const universityName =
+                    universities.find((u) => u.id === user.university_id)
+                      ?.university_name || "-";
+                  return (
+                    <tr key={user.id}>
+                      <td>
+                        <strong>{user.full_name}</strong>
+                        <small>{user.email}</small>
+                      </td>
+                      <td>
+                        <span className={`badge badge-role ${user.role_name.toLowerCase()}`}>
+                          {ROLE_LABELS[user.role_name] || user.role_name}
+                        </span>
+                      </td>
+                      <td>{universityName}</td>
+                      <td>
+                        <span className={`pill pill-${user.is_active ? "active" : "inactive"}`}>
+                          {user.is_active ? "Aktif" : "Pasif"}
+                        </span>
+                      </td>
+                      <td className="actions-col">
+                        {user.auth_user_id !== currentUser?.auth_user_id ? (
+                          <button
+                            className="icon-btn btn-edit"
+                            onClick={() => onEditUser(user)}
+                            title="Rolü düzenle"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function CateringManagementContent() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [sessionReady, setSessionReady] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authMode, setAuthMode] = useState("login");
+  const [fullName, setFullName] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [registerRole, setRegisterRole] = useState("CATERING_ADMIN");
+  const [registerOptions, setRegisterOptions] = useState({
+    roles: FALLBACK_REGISTER_ROLES.map(([value, label]) => ({ value, label })),
+    universities: [],
+  });
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [nationalId, setNationalId] = useState("");
+  const [studentAge, setStudentAge] = useState("");
+  const [registerUniversityId, setRegisterUniversityId] = useState("");
+  const [registerPhone, setRegisterPhone] = useState("");
+  const [organizationName, setOrganizationName] = useState("");
+  const [partnerCompanyName, setPartnerCompanyName] = useState("");
+  const [brandName, setBrandName] = useState("");
+  const [productCategory, setProductCategory] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetCodeSent, setResetCodeSent] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const resetAuthForm = () => {
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setFullName("");
+    setCompanyName("");
+    setRegisterRole("CATERING_ADMIN");
+    setFirstName("");
+    setLastName("");
+    setNationalId("");
+    setStudentAge("");
+    setRegisterUniversityId("");
+    setRegisterPhone("");
+    setOrganizationName("");
+    setPartnerCompanyName("");
+    setBrandName("");
+    setProductCategory("");
+    setAcceptedTerms(false);
+    setShowLoginPassword(false);
+    setShowRegisterPassword(false);
+    setShowConfirmPassword(false);
+    setResetEmail("");
+    setResetCode("");
+    setResetPassword("");
+    setResetCodeSent(false);
+    setShowResetPassword(false);
+    setAuthMode("login");
+  };
+
+  const [dashboard, setDashboard] = useState(null);
+  const [universities, setUniversities] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [menuAssignments, setMenuAssignments] = useState([]);
+  const [weeklyMenus, setWeeklyMenus] = useState([]);
+  const [companies, setCompanies] = useState([]);
+
+  const [error, setError] = useState(null);
+  const [info, setInfo] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const [dateFilter, setDateFilter] = useState("30d");
+  const [companyFilter, setCompanyFilter] = useState("all");
+  const [universitySearch, setUniversitySearch] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [menuAssignmentSearch, setMenuAssignmentSearch] = useState("");
+  const [companySearch, setCompanySearch] = useState("");
+
+  // Modals state
+  const [modalType, setModalType] = useState(null);
+
+  // Selected item for edit/license
+  const [selectedUniv, setSelectedUniv] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedMenu, setSelectedMenu] = useState(null);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [selectedLicense, setSelectedLicense] = useState(null);
+
+  // Form Fields states
+  const [univForm, setUnivForm] = useState({
+    university_name: "",
+    city: "",
+    student_count: 0,
+    status: true,
+    company_id: "",
+  });
+
+  const [userForm, setUserForm] = useState({
+    auth_user_id: "",
+    email: "",
+    full_name: "",
+    role_name: "DIETITIAN",
+    university_id: "",
+    phone: "",
+    is_active: true,
+    company_id: "",
+  });
+
+  const [menuForm, setMenuForm] = useState({
+    menu_id: "",
+    weekly_menu_id: "",
+    university_id: "",
+    start_date: "",
+    end_date: "",
+    status: "ACTIVE",
+    is_published: false,
+    company_id: "",
+  });
+
+  const [companyForm, setCompanyForm] = useState({
+    company_name: "",
+    tax_number: "",
+    email: "",
+    phone: "",
+    address: "",
+    plan_name: "Starter",
+    max_users: 5,
+    max_universities: 2,
+    start_date: "",
+    expire_date: "",
+    status: true,
+  });
+
+  const [licenseForm, setLicenseForm] = useState({
+    plan_name: "Starter",
+    max_users: 5,
+    max_universities: 2,
+    start_date: "",
+    expire_date: "",
+    status: true,
+  });
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/auth/register-options`)
+      .then((response) => {
+        if (!response.ok) throw new Error("Register options failed");
+        return response.json();
+      })
+      .then((data) => {
+        const roles = Array.isArray(data.roles) && data.roles.length
+          ? data.roles
+          : FALLBACK_REGISTER_ROLES.map(([value, label]) => ({ value, label }));
+        setRegisterOptions({
+          roles,
+          universities: Array.isArray(data.universities) ? data.universities : [],
+        });
+        if (!roles.some((role) => role.value === registerRole)) {
+          setRegisterRole(roles[0]?.value || "CATERING_ADMIN");
+        }
+      })
+      .catch(() => {
+        setRegisterOptions({
+          roles: FALLBACK_REGISTER_ROLES.map(([value, label]) => ({ value, label })),
+          universities: [],
+        });
+      });
+  }, []);
+
+  useEffect(() => {
+    setError(null);
+    setInfo(null);
+    setCompanyName("");
+    setFullName("");
+    setFirstName("");
+    setLastName("");
+    setNationalId("");
+    setStudentAge("");
+    setRegisterUniversityId("");
+    setRegisterPhone("");
+    setOrganizationName("");
+    setPartnerCompanyName("");
+    setBrandName("");
+    setProductCategory("");
+  }, [registerRole]);
+
+  // Init auth check
+  useEffect(() => {
+    const hasMock = localStorage.getItem(CATERING_SESSION_KEY);
+    if (hasMock) {
+      setIsAuthed(true);
+      setSessionReady(true);
+      return;
+    }
+    if (!isSupabaseConfigured) {
+      setIsAuthed(false);
+      setSessionReady(true);
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      setIsAuthed(Boolean(data.session));
+      setSessionReady(true);
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setIsAuthed(true);
+      } else if (!localStorage.getItem(CATERING_SESSION_KEY)) {
+        setIsAuthed(false);
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const syncSession = () => {
+      const hasMock = Boolean(localStorage.getItem(CATERING_SESSION_KEY));
+      if (!hasMock) {
+        setIsAuthed(false);
+        setCurrentUser(null);
+        setDashboard(null);
+        setUniversities([]);
+        setUsers([]);
+        setMenuAssignments([]);
+        setWeeklyMenus([]);
+        setCompanies([]);
+        setModalType(null);
+        resetAuthForm();
+        setLoading(false);
+      }
+    };
+    window.addEventListener("storage", syncSession);
+    window.addEventListener("catering-session-changed", syncSession);
+    return () => {
+      window.removeEventListener("storage", syncSession);
+      window.removeEventListener("catering-session-changed", syncSession);
+    };
+  }, []);
+
+  // Fetch current user details on auth
+  useEffect(() => {
+    if (!isAuthed) {
+      setCurrentUser(null);
+      return;
+    }
+    setLoading(true);
+    apiGet("/auth/me")
+      .then((profile) => {
+        setCurrentUser(profile);
+      })
+      .catch((err) => {
+        setError(err.message);
+        if (
+          err.message.includes("profile not found") ||
+          err.message.includes("not active") ||
+          err.message.includes("Oturum bulunamadı") ||
+          err.message.includes("Forbidden") ||
+          err.message.includes("403") ||
+          err.message.includes("401")
+        ) {
+          localStorage.removeItem(CATERING_SESSION_KEY);
+          window.dispatchEvent(new Event("catering-session-changed"));
+          setIsAuthed(false);
+          setCurrentUser(null);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [isAuthed]);
+
+  // Load view data
+  const loadData = (silent = false) => {
+    if (!isAuthed || !currentUser) return Promise.resolve();
+    if (!silent) {
+      setLoading(true);
+    }
+    setError(null);
+
+    if (!canLoadAdminData(currentUser.role_name)) {
+      setDashboard(null);
+      setUniversities([]);
+      setUsers([]);
+      setMenuAssignments([]);
+      setWeeklyMenus([]);
+      setCompanies([]);
+      if (!silent) {
+        setLoading(false);
+      }
+      return Promise.resolve();
+    }
+
+    const fetches = [
+      apiGet("/dashboard"),
+      apiGet("/universities"),
+      apiGet("/users"),
+      apiGet("/menu-assignments"),
+    ];
+
+    if (currentUser?.role_name === "SUPER_ADMIN") {
+      fetches.push(apiGet("/companies"));
+    } else if (currentUser?.company_id) {
+      fetches.push(apiGet(`/companies/${currentUser.company_id}`));
+    }
+
+    return Promise.all(fetches)
+      .then(
+        ([dashboardData, universityData, userData, menuData, companyData]) => {
+          setDashboard(dashboardData);
+          setUniversities(universityData);
+          setUsers(userData);
+          setMenuAssignments(menuData);
+          if (companyData) {
+            setCompanies(
+              Array.isArray(companyData) ? companyData : [companyData],
+            );
+          }
+        },
+      )
+      .catch((err) => setError(err.message))
+      .finally(() => {
+        if (!silent) {
+          setLoading(false);
+        }
+      });
+  };
+
+  function refreshWeeklyMenus() {
+    return getMenus()
+      .then((menus) => {
+        const sortedMenus = sortWeeklyMenus(menus);
+        setWeeklyMenus(sortedMenus);
+        return sortedMenus;
+      })
+      .catch(() => {
+        setWeeklyMenus([]);
+        return [];
+      });
+  }
+
+  useEffect(() => {
+    if (isAuthed && currentUser) {
+      // Initial full load (with loading spinner)
+      loadData(false);
+    }
+  }, [isAuthed, currentUser]);
+
+  useEffect(() => {
+    if (isAuthed && currentUser && roleCan(currentUser.role_name, "menuAssignments")) {
+      refreshWeeklyMenus();
+    } else {
+      setWeeklyMenus([]);
+    }
+  }, [isAuthed, currentUser]);
+
+  useEffect(() => {
+    if (!isAuthed || !currentUser) return;
+    const routeKey = getCateringRouteKey(location.pathname);
+    if (!roleCan(currentUser.role_name, routeKey)) {
+      navigate("/modules/catering-management", { replace: true });
+    }
+  }, [isAuthed, currentUser, location.pathname, navigate]);
+
+  // Supabase Realtime subscription
+  const { status: realtimeStatus } = useRealtimeData({
+    enabled: isAuthed && !!currentUser,
+    initialUniversities: universities,
+    initialUsers: users,
+    initialMenus: menuAssignments,
+    initialCompanies: companies,
+    onUniversityChange: setUniversities,
+    onUserChange: setUsers,
+    onMenuChange: setMenuAssignments,
+    onCompanyChange: setCompanies,
+  });
+
+  const licenseTone = useMemo(() => {
+    if (!dashboard?.active_license) return "danger";
+    if ((dashboard.license_days_left ?? 999) <= 30) return "warning";
+    return "success";
+  }, [dashboard]);
+
+  const dashFilteredData = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+
+    let filteredMenus = menuAssignments;
+    if (dateFilter === "30d") {
+      filteredMenus = filteredMenus.filter(
+        (m) => new Date(m.created_at) >= cutoff,
+      );
+    }
+
+    if (companyFilter !== "all") {
+      const cid = parseInt(companyFilter, 10);
+      return {
+        universities: universities.filter((u) => u.company_id === cid),
+        users: users.filter((u) => u.company_id === cid),
+        menuAssignments: filteredMenus.filter((m) => m.company_id === cid),
+      };
+    }
+
+    return { universities, users, menuAssignments: filteredMenus };
+  }, [universities, users, menuAssignments, dateFilter, companyFilter]);
+
+  const normalizeSearch = (value) => String(value || "").toLocaleLowerCase("tr-TR");
+  const weeklyMenusById = useMemo(
+    () => new Map(weeklyMenus.map((menu) => [Number(menu.id), menu])),
+    [weeklyMenus],
+  );
+  const selectedWeeklyMenu = weeklyMenusById.get(Number(menuForm.weekly_menu_id));
+  const menuAssignableUniversities =
+    currentUser?.role_name === "SUPER_ADMIN" && menuForm.company_id
+      ? universities.filter((university) => String(university.company_id) === String(menuForm.company_id))
+      : universities;
+  const visibleUniversities = universities.filter((univ) => {
+    const q = normalizeSearch(universitySearch);
+    return !q || normalizeSearch(`${univ.university_name} ${univ.city} ${univ.student_count}`).includes(q);
+  });
+  const visibleUsers = users.filter((user) => {
+    const q = normalizeSearch(userSearch);
+    const uName = universities.find((u) => u.id === user.university_id)?.university_name || "";
+    return !q || normalizeSearch(`${user.full_name} ${user.email} ${ROLE_LABELS[user.role_name] || user.role_name} ${uName} ${user.phone}`).includes(q);
+  });
+  const visibleMenuAssignments = menuAssignments.filter((menu) => {
+    const q = normalizeSearch(menuAssignmentSearch);
+    const uName = universities.find((u) => u.id === menu.university_id)?.university_name || "";
+    const assignerName = users.find((u) => u.id === menu.assigned_by)?.full_name || "";
+    const weeklyMenuLabel = formatWeeklyMenuLabel(weeklyMenusById.get(Number(menu.weekly_menu_id)));
+    return !q || normalizeSearch(`${weeklyMenuLabel} ${menu.menu_id} ${uName} ${assignerName} ${menu.status} ${menu.start_date} ${menu.end_date}`).includes(q);
+  });
+  const visibleCompanies = companies.filter((comp) => {
+    const q = normalizeSearch(companySearch);
+    return !q || normalizeSearch(`${comp.company_name} ${comp.tax_number} ${comp.email} ${comp.phone} ${comp.license?.plan_name}`).includes(q);
+  });
+
+  async function signIn(event) {
+    event?.preventDefault();
+    if (loading) return;
+    setError(null);
+    setInfo(null);
+    setLoading(true);
+    try {
+      let data;
+      let sessionToken;
+      const normalizedEmail = email.trim().toLowerCase();
+
+      if (!isValidEmail(normalizedEmail)) {
+        throw new Error("Geçerli bir e-posta girin.");
+      }
+      if (!password) {
+        throw new Error("Şifrenizi girin.");
+      }
+
+      try {
+        if (!isSupabaseConfigured) {
+          throw new Error("Supabase yapilandirilmamis, yerel login deneniyor.");
+        }
+        // 1. Try signing in via Supabase Auth
+        const { data: authData, error: authError } =
+          await supabase.auth.signInWithPassword({
+            email: normalizedEmail,
+            password,
+          });
+        if (authError) throw authError;
+        if (!authData.session) throw new Error("Oturum başlatılamadı.");
+
+        // 2. Fetch the user profile from backend
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authData.session.access_token}`,
+          },
+        });
+        data = await response.json();
+        if (!response.ok)
+          throw new Error(data.detail ?? "Profil bilgisi alınamadı.");
+        sessionToken = authData.session.access_token;
+      } catch (supabaseErr) {
+        // Fallback: Try backend login directly (useful for local seed users not in Supabase Auth)
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: normalizedEmail, password }),
+        });
+        const fallbackData = await response.json();
+        if (!response.ok) {
+          throw new Error(fallbackData.detail ?? "Giriş başarısız.");
+        }
+        data = fallbackData.user;
+        sessionToken = fallbackData.access_token;
+      }
+
+      const mockSession = {
+        access_token: sessionToken,
+        user: {
+          email: data.email,
+          id: data.auth_user_id,
+          full_name: data.full_name,
+          role_name: data.role_name,
+        },
+      };
+      localStorage.setItem(CATERING_SESSION_KEY, JSON.stringify(mockSession));
+      window.dispatchEvent(new Event("catering-session-changed"));
+      setIsAuthed(true);
+      setCurrentUser(data);
+      setInfo("Başarıyla giriş yapıldı.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRegister(event) {
+    event?.preventDefault();
+    if (loading) return;
+    setError(null);
+    setInfo(null);
+    setLoading(true);
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      const validationErrors = getRoleAwareRegisterValidation({
+        registerRole,
+        companyName,
+        fullName,
+        firstName,
+        lastName,
+        nationalId,
+        age: studentAge,
+        universityId: registerUniversityId,
+        phone: registerPhone,
+        organizationName,
+        partnerCompanyName,
+        brandName,
+        email: normalizedEmail,
+        password,
+        confirmPassword,
+        acceptedTerms,
+      });
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors[0]);
+      }
+      const registerPayload = {
+        email: normalizedEmail,
+        password,
+        auth_user_id: crypto.randomUUID(),
+        role_name: registerRole,
+        phone: registerPhone || null,
+      };
+      if (registerRole === "CATERING_ADMIN") {
+        registerPayload.company_name = companyName;
+        registerPayload.full_name = fullName;
+      } else if (registerRole === "UNIVERSITY_ADMIN") {
+        registerPayload.full_name = fullName;
+        registerPayload.university_id = Number(registerUniversityId);
+      } else if (registerRole === "STUDENT") {
+        registerPayload.first_name = firstName;
+        registerPayload.last_name = lastName;
+        registerPayload.national_id = nationalId;
+        registerPayload.age = Number(studentAge);
+        registerPayload.university_id = Number(registerUniversityId);
+      } else if (registerRole === "RESEARCHER") {
+        registerPayload.full_name = fullName;
+        registerPayload.university_id = registerUniversityId ? Number(registerUniversityId) : null;
+        registerPayload.organization_name = organizationName;
+      } else if (registerRole === "PARTNER_COMPANY") {
+        registerPayload.full_name = fullName;
+        registerPayload.partner_company_name = partnerCompanyName;
+        registerPayload.brand_name = brandName;
+        registerPayload.product_category = productCategory || null;
+      }
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(registerPayload),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail ?? "Kayıt oluşturulamadı.");
+      }
+
+      setAuthMode("login");
+      setPassword("");
+      setConfirmPassword("");
+      setAcceptedTerms(false);
+      setCompanyName("");
+      setFullName("");
+      setFirstName("");
+      setLastName("");
+      setNationalId("");
+      setStudentAge("");
+      setRegisterUniversityId("");
+      setRegisterPhone("");
+      setOrganizationName("");
+      setPartnerCompanyName("");
+      setBrandName("");
+      setProductCategory("");
+      setInfo("Kayıt başarılı. Giriş yaparak devam edebilirsiniz.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function signOut() {
+    localStorage.removeItem(CATERING_SESSION_KEY);
+    window.dispatchEvent(new Event("catering-session-changed"));
+    setIsAuthed(false);
+    setCurrentUser(null);
+    navigate("/modules/catering-management", { replace: true });
+    if (isSupabaseConfigured) {
+      await supabase.auth.signOut();
+    }
+    resetAuthForm();
+    setError(null);
+    setInfo(null);
+    setDashboard(null);
+    setUniversities([]);
+    setUsers([]);
+    setMenuAssignments([]);
+    setWeeklyMenus([]);
+    setCompanies([]);
+  }
+
+  // Action handlers
+  const handleAddUniv = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const url =
+        currentUser?.role_name === "SUPER_ADMIN"
+          ? `/universities?company_id=${univForm.company_id}`
+          : "/universities";
+      await apiPost(url, {
+        university_name: univForm.university_name,
+        city: univForm.city || null,
+        student_count:
+          univForm.student_count === "" ? null : nonNegativeInt(univForm.student_count),
+      });
+      setModalType(null);
+      setInfo("Üniversite başarıyla eklendi.");
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditUniv = async () => {
+    if (!selectedUniv) return;
+    try {
+      setLoading(true);
+      setError(null);
+      await apiPut(`/universities/${selectedUniv.id}`, {
+        university_name: univForm.university_name,
+        city: univForm.city || null,
+        student_count:
+          univForm.student_count === "" ? null : nonNegativeInt(univForm.student_count),
+        status: univForm.status,
+      });
+      setModalType(null);
+      setInfo("Üniversite başarıyla güncellendi.");
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteUniv = async (id) => {
+    if (!confirm("Bu üniversiteyi silmek istediğinize emin misiniz?")) return;
+    try {
+      setLoading(true);
+      setError(null);
+      await apiDelete(`/universities/${id}`);
+      setInfo("Üniversite başarıyla silindi.");
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddUser = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const url =
+        currentUser?.role_name === "SUPER_ADMIN"
+          ? `/users?company_id=${userForm.company_id}`
+          : "/users";
+      await apiPost(url, {
+        auth_user_id: userForm.auth_user_id,
+        email: userForm.email,
+        full_name: userForm.full_name,
+        role_name: userForm.role_name,
+        phone: userForm.phone || null,
+        university_id: userForm.university_id || null,
+      });
+      setModalType(null);
+      setInfo("Kullanıcı başarıyla eklendi.");
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditUser = async () => {
+    if (!selectedUser) return;
+    try {
+      setLoading(true);
+      setError(null);
+      await apiPut(`/users/${selectedUser.id}`, {
+        full_name: userForm.full_name,
+        phone: userForm.phone || null,
+        is_active: userForm.is_active,
+        role_name: userForm.role_name,
+        university_id: userForm.university_id || null,
+      });
+      setModalType(null);
+      setInfo("Kullanıcı başarıyla güncellendi.");
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (id) => {
+    if (!confirm("Bu kullanıcıyı silmek istediğinize emin misiniz?")) return;
+    try {
+      setLoading(true);
+      setError(null);
+      await apiDelete(`/users/${id}`);
+      setInfo("Kullanıcı başarıyla silindi.");
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddMenu = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      if (!menuForm.weekly_menu_id) {
+        throw new Error("Atanacak haftalık menüyü seçin.");
+      }
+      if (!menuForm.university_id) {
+        throw new Error("Menünün atanacağı üniversiteyi seçin.");
+      }
+      const url =
+        currentUser?.role_name === "SUPER_ADMIN"
+          ? `/menu-assignments?company_id=${menuForm.company_id}`
+          : "/menu-assignments";
+      await apiPost(url, {
+        weekly_menu_id: Number(menuForm.weekly_menu_id),
+        university_id: menuForm.university_id,
+        start_date: menuForm.start_date,
+        end_date: menuForm.end_date,
+        status: menuForm.status,
+        is_published: menuForm.is_published,
+      });
+      setModalType(null);
+      setInfo("Menü ataması başarıyla eklendi.");
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditMenu = async () => {
+    if (!selectedMenu) return;
+    try {
+      setLoading(true);
+      setError(null);
+      await apiPut(`/menu-assignments/${selectedMenu.id}`, {
+        start_date: menuForm.start_date,
+        end_date: menuForm.end_date,
+        status: menuForm.status,
+        is_published: menuForm.is_published,
+      });
+      setModalType(null);
+      setInfo("Menü ataması başarıyla güncellendi.");
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteMenu = async (id) => {
+    if (!confirm("Bu menü atamasını silmek istediğinize emin misiniz?")) return;
+    try {
+      setLoading(true);
+      setError(null);
+      await apiDelete(`/menu-assignments/${id}`);
+      setInfo("Menü ataması başarıyla silindi.");
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddCompany = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      await apiPost("/companies", {
+        ...companyForm,
+        tax_number: companyForm.tax_number || null,
+        max_users: positiveInt(companyForm.max_users, 1),
+        max_universities: positiveInt(companyForm.max_universities, 1),
+      });
+      setModalType(null);
+      setInfo("Firma ve lisansı başarıyla eklendi.");
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditCompany = async () => {
+    if (!selectedCompany) return;
+    try {
+      setLoading(true);
+      setError(null);
+      await apiPut(`/companies/${selectedCompany.id}`, {
+        company_name: companyForm.company_name,
+        tax_number: companyForm.tax_number || null,
+        email: companyForm.email || null,
+        phone: companyForm.phone || null,
+        address: companyForm.address || null,
+        status: companyForm.status,
+      });
+      setModalType(null);
+      setInfo("Firma başarıyla güncellendi.");
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditLicense = async () => {
+    const companyId = selectedLicense?.company_id ?? selectedCompany?.id;
+    if (!companyId) return;
+    try {
+      setLoading(true);
+      setError(null);
+      await apiPut(
+        `/companies/${companyId}/license`,
+        {
+          ...licenseForm,
+          max_users: positiveInt(licenseForm.max_users, 1),
+          max_universities: positiveInt(licenseForm.max_universities, 1),
+        },
+      );
+      const updatedLicense = await apiGet(`/companies/${companyId}/license`);
+      if (!licenseMatchesForm(updatedLicense, licenseForm)) {
+        throw new Error("Lisans kaydı doğrulanamadı. Lütfen tekrar deneyin.");
+      }
+      setSelectedLicense(updatedLicense);
+      setCompanies((items) =>
+        items.map((company) =>
+          company.id === companyId
+            ? { ...company, license: updatedLicense }
+            : company,
+        ),
+      );
+      setModalType(null);
+      setInfo("Lisans başarıyla güncellendi.");
+      await loadData(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCompany = async (id) => {
+    if (
+      !confirm(
+        "Firma silindiğinde bağlı tüm üniversiteler, lisans ve kullanıcılar silinecektir. Emin misiniz?",
+      )
+    )
+      return;
+    try {
+      setLoading(true);
+      setError(null);
+      await apiDelete(`/companies/${id}`);
+      setInfo("Firma başarıyla silindi.");
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Modal opens helper
+  const openAddUnivModal = () => {
+    setUnivForm({
+      university_name: "",
+      city: "",
+      student_count: 0,
+      status: true,
+      company_id: companies[0]?.id || "",
+    });
+    setModalType("add-univ");
+  };
+
+  const openEditUnivModal = (univ) => {
+    setSelectedUniv(univ);
+    setUnivForm({
+      university_name: univ.university_name,
+      city: univ.city || "",
+      student_count: univ.student_count || 0,
+      status: univ.status,
+      company_id: univ.company_id,
+    });
+    setModalType("edit-univ");
+  };
+
+  const openAddUserModal = () => {
+    setUserForm({
+      auth_user_id: crypto.randomUUID(), // Mock generate uuid for client ease
+      email: "",
+      full_name: "",
+      role_name: "DIETITIAN",
+      university_id: universities[0]?.id || "",
+      phone: "",
+      is_active: true,
+      company_id: companies[0]?.id || "",
+    });
+    setModalType("add-user");
+  };
+
+  const openEditUserModal = (user) => {
+    setSelectedUser(user);
+    setUserForm({
+      auth_user_id: user.auth_user_id,
+      email: user.email,
+      full_name: user.full_name,
+      role_name: user.role_name,
+      university_id: user.university_id || "",
+      phone: user.phone || "",
+      is_active: user.is_active,
+      company_id: user.company_id || "",
+    });
+    setModalType("edit-user");
+  };
+
+  const openAddMenuModal = async () => {
+    const menuOptions = await refreshWeeklyMenus();
+    const defaultWeeklyMenu = (menuOptions.length ? menuOptions : weeklyMenus).find(
+      (menu) => String(menu.status).toLowerCase() === "approved",
+    ) || (menuOptions.length ? menuOptions : weeklyMenus)[0];
+    const defaultCompanyId = companies[0]?.id || "";
+    const defaultUniversity =
+      currentUser?.role_name === "SUPER_ADMIN" && defaultCompanyId
+        ? universities.find((university) => String(university.company_id) === String(defaultCompanyId))
+        : universities[0];
+    setMenuForm({
+      menu_id: "",
+      weekly_menu_id: defaultWeeklyMenu?.id || "",
+      university_id: defaultUniversity?.id || "",
+      start_date: defaultWeeklyMenu?.week_start_date || new Date().toISOString().split("T")[0],
+      end_date: defaultWeeklyMenu
+        ? addDaysIso(defaultWeeklyMenu.week_start_date, 6)
+        : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0],
+      status: "ACTIVE",
+      is_published: false,
+      company_id: defaultCompanyId,
+    });
+    setModalType("add-menu");
+  };
+
+  const openEditMenuModal = (menu) => {
+    setSelectedMenu(menu);
+    setMenuForm({
+      menu_id: menu.menu_id,
+      weekly_menu_id: menu.weekly_menu_id || "",
+      university_id: menu.university_id,
+      start_date: menu.start_date,
+      end_date: menu.end_date,
+      status: menu.status,
+      is_published: menu.is_published,
+      company_id: menu.company_id,
+    });
+    setModalType("edit-menu");
+  };
+
+  const openAddCompanyModal = () => {
+    setCompanyForm({
+      company_name: "",
+      tax_number: "",
+      email: "",
+      phone: "",
+      address: "",
+      plan_name: "Starter",
+      max_users: 5,
+      max_universities: 2,
+      start_date: new Date().toISOString().split("T")[0],
+      expire_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
+      status: true,
+    });
+    setModalType("add-company");
+  };
+
+  const openEditCompanyModal = (company) => {
+    setSelectedCompany(company);
+    setCompanyForm({
+      company_name: company.company_name,
+      tax_number: company.tax_number || "",
+      email: company.email || "",
+      phone: company.phone || "",
+      address: company.address || "",
+      plan_name: "Starter",
+      max_users: 5,
+      max_universities: 2,
+      start_date: "",
+      expire_date: "",
+      status: company.status,
+    });
+    setModalType("edit-company");
+  };
+
+  const openEditLicenseModal = async (company) => {
+    setSelectedCompany(company);
+    try {
+      setLoading(true);
+      const lic = await apiGet(`/companies/${company.id}/license`);
+      setSelectedLicense(lic);
+      setLicenseForm({
+        plan_name: lic.plan_name,
+        max_users: lic.max_users,
+        max_universities: lic.max_universities,
+        start_date: lic.start_date,
+        expire_date: lic.expire_date,
+        status: lic.status,
+      });
+      setModalType("edit-license");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Lisans bilgisi yüklenemedi.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!sessionReady) {
+    return (
+      <main className="loading-container">
+        <div className="spinner"></div>
+        <p>TabloDot giriş sistemi başlatılıyor...</p>
+      </main>
+    );
+  }
+
+  const normalizedAuthEmail = email.trim().toLowerCase();
+  const registerErrors = getRoleAwareRegisterValidation({
+    registerRole,
+    companyName,
+    fullName,
+    firstName,
+    lastName,
+    nationalId,
+    age: studentAge,
+    universityId: registerUniversityId,
+    phone: registerPhone,
+    organizationName,
+    partnerCompanyName,
+    brandName,
+    email: normalizedAuthEmail,
+    password,
+    confirmPassword,
+    acceptedTerms,
+  });
+  const loginDisabled = loading || !isValidEmail(normalizedAuthEmail) || !password;
+  const registerDisabled = loading || registerErrors.length > 0;
+  const authHeaderCopy = {
+    login: {
+      title: "TabloDot Giriş Paneli",
+      description: "Rolünüze özel çalışma alanına güvenli erişim sağlayın.",
+    },
+    register: {
+      title: "TabloDot Kayıt Paneli",
+      description: "Firma ve kullanıcı bilgilerinizi girerek çalışma alanınızı oluşturun.",
+    },
+    forgot: {
+      title: "Şifre Sıfırlama",
+      description: "E-posta adresinize gelen kod ile yeni şifrenizi belirleyin.",
+    },
+  }[authMode];
+
+  if (!isAuthed) {
+    return (
+      <main className="login-shell">
+        <div className="login-page">
+          <header className="login-topbar">
+            <a href="/" className="login-brand" aria-label="TabloDot ana sayfa">
+              <img src={tabloDotLogo} alt="TabloDot" />
+            </a>
+            <a href="/" className="login-home-link">Ana sayfaya dön</a>
+          </header>
+
+          <div className="login-layout">
+            <section className="login-panel">
+          <header className="login-header">
+            <div className="logo-shield animate-pulse">
+              <ShieldCheck size={40} />
+            </div>
+            <h1>{authHeaderCopy.title}</h1>
+            <p>{authHeaderCopy.description}</p>
+          </header>
+
+          <div className="auth-tabs">
+            <button
+              className={`auth-tab-btn ${authMode === "login" ? "active" : ""}`}
+              onClick={() => {
+                setAuthMode("login");
+                setError(null);
+                setInfo(null);
+              }}
+            >
+              Giriş Yap
+            </button>
+            <button
+              className={`auth-tab-btn ${authMode === "register" ? "active" : ""}`}
+              onClick={() => {
+                setAuthMode("register");
+                setError(null);
+                setInfo(null);
+              }}
+            >
+              Kayıt Ol
+            </button>
+          </div>
+
+          {authMode === "login" ? (
+            <form className="login-form" onSubmit={signIn}>
+              <div className="input-group">
+                <label>E-posta</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ornek@catering.com"
+                />
+              </div>
+
+              <PasswordField
+                label="Şifre"
+                value={password}
+                onChange={setPassword}
+                visible={showLoginPassword}
+                onToggle={() => setShowLoginPassword((value) => !value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+              />
+
+              <button
+                type="submit"
+                disabled={loginDisabled}
+                className="btn btn-primary"
+              >
+                {loading ? "Giriş Yapılıyor..." : "Giriş Yap"}
+              </button>
+              <button
+                type="button"
+                className="auth-link-btn"
+                onClick={() => {
+                  setAuthMode("forgot");
+                  setResetEmail(email.trim().toLowerCase());
+                  setResetCode("");
+                  setResetPassword("");
+                  setResetCodeSent(false);
+                  setError(null);
+                  setInfo(null);
+                }}
+              >
+                Şifremi unuttum
+              </button>
+            </form>
+          ) : authMode === "forgot" ? (
+            <form className="login-form" onSubmit={resetCodeSent ? handlePasswordResetConfirm : handlePasswordResetRequest}>
+              <div className="input-group">
+                <label>E-posta</label>
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="ornek@catering.com"
+                  disabled={resetCodeSent}
+                />
+              </div>
+
+              {resetCodeSent && (
+                <>
+                  <div className="input-group">
+                    <label>6 Haneli Kod</label>
+                    <input
+                      className="reset-code-input"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={resetCode}
+                      onChange={(e) => setResetCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="_ _ _ _ _ _"
+                    />
+                  </div>
+
+                  <PasswordField
+                    label="Yeni Şifre"
+                    value={resetPassword}
+                    onChange={setResetPassword}
+                    visible={showResetPassword}
+                    onToggle={() => setShowResetPassword((value) => !value)}
+                    placeholder="Yeni şifrenizi girin"
+                    autoComplete="new-password"
+                  />
+                </>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading || !isValidEmail(resetEmail.trim().toLowerCase()) || (resetCodeSent && (!/^\d{6}$/.test(resetCode) || resetPassword.length < 6))}
+                className="btn btn-primary"
+              >
+                {loading ? "İşleniyor..." : resetCodeSent ? "Şifreyi Değiştir" : "Kod Gönder"}
+              </button>
+              <button
+                type="button"
+                className="auth-link-btn"
+                onClick={() => {
+                  setAuthMode("login");
+                  setError(null);
+                  setInfo(null);
+                }}
+              >
+                Giriş ekranına dön
+              </button>
+            </form>
+          ) : (
+            
+            <form className="login-form" onSubmit={handleRegister}>
+
+              <div className="input-group">
+                <label>Kullanıcı Rolü</label>
+                <select
+                  value={registerRole}
+                  onChange={(e) => setRegisterRole(e.target.value)}
+                >
+                  {registerOptions.roles.map(({ value, label }) => (
+                    <option key={value} value={value}>{ROLE_LABELS[value] || label}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {registerRole === "CATERING_ADMIN" && (
+                <div className="input-group">
+                  <label>Firma Adı</label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="Lale Catering A.Ş."
+                  />
+                </div>
+              )}
+
+              <RegisterRoleFields
+                registerRole={registerRole}
+                firstName={firstName}
+                setFirstName={setFirstName}
+                lastName={lastName}
+                setLastName={setLastName}
+                nationalId={nationalId}
+                setNationalId={setNationalId}
+                studentAge={studentAge}
+                setStudentAge={setStudentAge}
+                fullName={fullName}
+                setFullName={setFullName}
+                registerUniversityId={registerUniversityId}
+                setRegisterUniversityId={setRegisterUniversityId}
+                registerOptions={registerOptions}
+                organizationName={organizationName}
+                setOrganizationName={setOrganizationName}
+                partnerCompanyName={partnerCompanyName}
+                setPartnerCompanyName={setPartnerCompanyName}
+                brandName={brandName}
+                setBrandName={setBrandName}
+                productCategory={productCategory}
+                setProductCategory={setProductCategory}
+                digitsOnly={digitsOnly}
+              />
+
+              <div className="input-group">
+                <label>Telefon {registerRole === "STUDENT" || registerRole === "RESEARCHER" ? "(opsiyonel)" : ""}</label>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={11}
+                  value={registerPhone}
+                  onChange={(e) => setRegisterPhone(digitsOnly(e.target.value, 11))}
+                  placeholder="05555555555"
+                />
+              </div>
+              <div className="input-group">
+                <label>E-posta</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ornek@catering.com"
+                />
+              </div>
+
+              <PasswordField
+                label="Şifre"
+                value={password}
+                onChange={setPassword}
+                visible={showRegisterPassword}
+                onToggle={() => setShowRegisterPassword((value) => !value)}
+                placeholder="En az 6 karakter"
+                autoComplete="new-password"
+              />
+
+              <PasswordStrength password={password} />
+
+              <PasswordField
+                label="Şifre Tekrar"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                visible={showConfirmPassword}
+                onToggle={() => setShowConfirmPassword((value) => !value)}
+                placeholder="Şifrenizi tekrar girin"
+                autoComplete="new-password"
+              />
+
+              <div className="auth-checklist">
+                {[
+                  registerRole === "CATERING_ADMIN"
+                    ? ["Firma", companyName.trim().length >= 2]
+                    : registerRole === "STUDENT"
+                      ? ["Öğrenci bilgileri", firstName.trim().length >= 2 && lastName.trim().length >= 2 && /^\d{11}$/.test(nationalId.trim()) && Number(studentAge) > 0]
+                      : registerRole === "RESEARCHER"
+                        ? ["Araştırmacı bilgileri", organizationName.trim().length >= 2]
+                        : registerRole === "PARTNER_COMPANY"
+                          ? ["Partner bilgileri", partnerCompanyName.trim().length >= 2 && brandName.trim().length >= 2]
+                          : ["Üniversite", Boolean(registerUniversityId)],
+                  ["Ad soyad", registerRole === "STUDENT" ? firstName.trim().length >= 2 && lastName.trim().length >= 2 : fullName.trim().length >= 2],
+                  ["Üniversite", !["UNIVERSITY_ADMIN", "STUDENT"].includes(registerRole) || Boolean(registerUniversityId)],
+                  ["E-posta", isValidEmail(normalizedAuthEmail)],
+                  ["Güçlü şifre", getPasswordStrength(password).score >= 2],
+                  ["Şifre eşleşmesi", password && password === confirmPassword],
+                ].map(([label, ok]) => (
+                  <span key={label} className={ok ? "ok" : ""}>
+                    <Check size={12} /> {label}
+                  </span>
+                ))}
+              </div>
+
+              <label className="auth-consent">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                />
+                <span>Kullanım şartlarını ve veri işleme politikasını kabul ediyorum.</span>
+              </label>
+
+              <button
+                type="submit"
+                disabled={registerDisabled}
+                className="btn btn-primary"
+              >
+                {loading ? "Kayıt Yapılıyor..." : "Kayıt Ol"}
+              </button>
+            </form>
+          )}
+
+          {error && (
+            <div className="alert alert-danger" style={{ marginTop: "1rem" }}>
+              {error}
+            </div>
+          )}
+          {info && (
+            <div className="alert alert-success" style={{ marginTop: "1rem" }}>
+              {info}
+            </div>
+          )}
+            </section>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (isAuthed && !currentUser) {
+    return (
+      <main className="loading-container dashboard-loading-container" aria-label="Profil yükleniyor">
+        <div className="spinner"></div>
+      </main>
+    );
+  }
+
+  const initialDashboardLoading =
+    isAuthed &&
+    loading &&
+    !dashboard &&
+    universities.length === 0 &&
+    users.length === 0 &&
+    menuAssignments.length === 0;
+
+  if (initialDashboardLoading) {
+    return (
+      <main className="loading-container dashboard-loading-container" aria-label="Panel yükleniyor">
+        <div className="spinner"></div>
+      </main>
+    );
+  }
+
+  async function handlePasswordResetRequest(event) {
+    event?.preventDefault();
+    if (loading) return;
+    setError(null);
+    setInfo(null);
+    setLoading(true);
+    try {
+      const normalizedEmail = resetEmail.trim().toLowerCase();
+      if (!isValidEmail(normalizedEmail)) {
+        throw new Error("Geçerli bir e-posta girin.");
+      }
+      const response = await fetch(`${API_BASE_URL}/auth/password-reset/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail ?? "Şifre sıfırlama kodu gönderilemedi.");
+      }
+      setResetEmail(normalizedEmail);
+      setResetCodeSent(true);
+      setInfo(data.detail || "Şifre sıfırlama kodu e-posta adresinize gönderildi.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePasswordResetConfirm(event) {
+    event?.preventDefault();
+    if (loading) return;
+    setError(null);
+    setInfo(null);
+    setLoading(true);
+    try {
+      const normalizedEmail = resetEmail.trim().toLowerCase();
+      if (!isValidEmail(normalizedEmail)) {
+        throw new Error("Geçerli bir e-posta girin.");
+      }
+      if (!/^\d{6}$/.test(resetCode)) {
+        throw new Error("6 haneli doğrulama kodunu girin.");
+      }
+      if (resetPassword.length < 6) {
+        throw new Error("Yeni şifre en az 6 karakter olmalı.");
+      }
+      const response = await fetch(`${API_BASE_URL}/auth/password-reset/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          code: resetCode,
+          new_password: resetPassword,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail ?? "Şifre güncellenemedi.");
+      }
+      setAuthMode("login");
+      setEmail(normalizedEmail);
+      setPassword("");
+      setResetCode("");
+      setResetPassword("");
+      setResetCodeSent(false);
+      setInfo(data.detail || "Şifreniz güncellendi. Yeni şifrenizle giriş yapabilirsiniz.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      {loading && (
+        <div className="loading-overlay">
+          <div className="spinner"></div>
+        </div>
+      )}
+
+      {/* Notifications */}
+      {error && (
+        <div className="alert alert-danger">
+          <span>{error}</span>
+          <button className="close-btn" onClick={() => setError(null)}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
+      {info && (
+        <div className="alert alert-success">
+          <span>{info}</span>
+          <button className="close-btn" onClick={() => setInfo(null)}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {/* Views */}
+      <Routes>
+        <Route
+          index
+          element={
+            <CateringDashboard
+              dashboard={dashboard}
+              universities={dashFilteredData.universities}
+              users={dashFilteredData.users}
+              menuAssignments={dashFilteredData.menuAssignments}
+              dateFilter={dateFilter}
+              onDateFilterToggle={() =>
+                setDateFilter((f) => (f === "30d" ? "all" : "30d"))
+              }
+              companyFilter={companyFilter}
+              onCompanyFilterChange={setCompanyFilter}
+              companies={companies}
+              currentUser={currentUser}
+            />
+          }
+        />
+
+        <Route element={<Outlet />}>
+          <Route
+            path="universities"
+            element={
+              <GuardedCateringView role={currentUser?.role_name} accessKey="universities">
+                <>
+                <header className="content-header">
+                  <div>
+                    <h1>Üniversiteler</h1>
+                    <p>
+                      Catering firmasının hizmet sağladığı kayıtlı
+                      üniversiteler.
+                    </p>
+                  </div>
+                  {["SUPER_ADMIN", "CATERING_ADMIN"].includes(
+                    currentUser?.role_name || "",
+                  ) && (
+                    <button
+                      className="btn btn-primary"
+                      onClick={openAddUnivModal}
+                    >
+                      <Plus size={16} /> Yeni Üniversite Ekle
+                    </button>
+                  )}
+                </header>
+
+                <div className="table-card">
+                  <div className="table-toolbar">
+                    <input
+                      className="table-search"
+                      value={universitySearch}
+                      onChange={(event) => setUniversitySearch(event.target.value)}
+                      placeholder="Üniversite veya şehir ara..."
+                    />
+                    <span className="table-count">{visibleUniversities.length} kayıt</span>
+                  </div>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Üniversite Adı</th>
+                        <th>Şehir</th>
+                        <th>Öğrenci Sayısı</th>
+                        <th>Durum</th>
+                        <th>Kayıt Tarihi</th>
+                        <th className="actions-col">İşlemler</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleUniversities.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="text-center">
+                            Kayıtlı üniversite bulunamadı.
+                          </td>
+                        </tr>
+                      ) : (
+                        visibleUniversities.map((univ) => (
+                          <tr key={univ.id}>
+                            <td>
+                              <strong>{univ.university_name}</strong>
+                            </td>
+                            <td>{univ.city ?? "-"}</td>
+                            <td>
+                              {univ.student_count?.toLocaleString() ?? "-"}
+                            </td>
+                            <td>
+                              <span
+                                className={`pill pill-${univ.status ? "active" : "inactive"}`}
+                              >
+                                {univ.status ? "Aktif" : "Pasif"}
+                              </span>
+                            </td>
+                            <td>
+                              {new Date(univ.created_at).toLocaleDateString(
+                                "tr-TR",
+                              )}
+                            </td>
+                            <td className="actions-col">
+                              {["SUPER_ADMIN", "CATERING_ADMIN"].includes(
+                                currentUser?.role_name || "",
+                              ) ? (
+                                <>
+                                  <button
+                                    className="icon-btn btn-edit"
+                                    onClick={() => openEditUnivModal(univ)}
+                                  >
+                                    <Edit2 size={14} />
+                                  </button>
+                                  <button
+                                    className="icon-btn btn-delete"
+                                    onClick={() => handleDeleteUniv(univ.id)}
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </>
+                              ) : (
+                                "-"
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                </>
+              </GuardedCateringView>
+            }
+          />
+
+          <Route
+            path="users"
+            element={
+              <GuardedCateringView role={currentUser?.role_name} accessKey="users">
+                <>
+                <header className="content-header">
+                  <div>
+                    <h1>Kullanıcı Yönetimi</h1>
+                    <p>
+                      Catering personeli ve üniversite yöneticisi hesapları.
+                    </p>
+                  </div>
+                  {[
+                    "SUPER_ADMIN",
+                    "CATERING_ADMIN",
+                    "UNIVERSITY_ADMIN",
+                  ].includes(currentUser?.role_name || "") && (
+                    <button
+                      className="btn btn-primary"
+                      onClick={openAddUserModal}
+                    >
+                      <Plus size={16} /> Yeni Kullanıcı Davet Et
+                    </button>
+                  )}
+                </header>
+
+                <div className="table-card">
+                  <div className="table-toolbar">
+                    <input
+                      className="table-search"
+                      value={userSearch}
+                      onChange={(event) => setUserSearch(event.target.value)}
+                      placeholder="Kullanıcı, e-posta, rol veya üniversite ara..."
+                    />
+                    <span className="table-count">{visibleUsers.length} kayıt</span>
+                  </div>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Ad Soyad</th>
+                        <th>E-posta</th>
+                        <th>Rol</th>
+                        <th>Hizmet Yeri (Üniversite)</th>
+                        <th>Telefon</th>
+                        <th>Durum</th>
+                        <th className="actions-col">İşlemler</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleUsers.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="text-center">
+                            Kayıtlı kullanıcı bulunamadı.
+                          </td>
+                        </tr>
+                      ) : (
+                        visibleUsers.map((user) => {
+                          const uName =
+                            universities.find(
+                              (u) => u.id === user.university_id,
+                            )?.university_name || "-";
+                          return (
+                            <tr key={user.id}>
+                              <td>
+                                <strong>{user.full_name}</strong>
+                              </td>
+                              <td>{user.email}</td>
+                              <td>
+                                <span
+                                  className={`badge badge-role ${user.role_name.toLowerCase()}`}
+                                >
+                                  {ROLE_LABELS[user.role_name] ||
+                                    user.role_name}
+                                </span>
+                              </td>
+                              <td>{uName}</td>
+                              <td>{user.phone ?? "-"}</td>
+                              <td>
+                                <span
+                                  className={`pill pill-${user.is_active ? "active" : "inactive"}`}
+                                >
+                                  {user.is_active ? "Aktif" : "Pasif"}
+                                </span>
+                              </td>
+                              <td className="actions-col">
+                                {[
+                                  "SUPER_ADMIN",
+                                  "CATERING_ADMIN",
+                                  "UNIVERSITY_ADMIN",
+                                ].includes(currentUser?.role_name || "") ? (
+                                  <>
+                                    <button
+                                      className="icon-btn btn-edit"
+                                      onClick={() => openEditUserModal(user)}
+                                    >
+                                      <Edit2 size={14} />
+                                    </button>
+                                    {user.auth_user_id !==
+                                      currentUser?.auth_user_id && (
+                                      <button
+                                        className="icon-btn btn-delete"
+                                        onClick={() =>
+                                          handleDeleteUser(user.id)
+                                        }
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    )}
+                                  </>
+                                ) : (
+                                  "-"
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                </>
+              </GuardedCateringView>
+            }
+          />
+
+          <Route
+            path="menu-assignments"
+            element={
+              <GuardedCateringView role={currentUser?.role_name} accessKey="menuAssignments">
+                <>
+                <header className="content-header">
+                  <div>
+                    <h1>Menü Atamaları</h1>
+                    <p>
+                      AI ile oluşturulan menülerin üniversiteler bazında
+                      planlama ve takvimi.
+                    </p>
+                  </div>
+                  {["SUPER_ADMIN", "CATERING_ADMIN", "DIETITIAN"].includes(
+                    currentUser?.role_name || "",
+                  ) && (
+                    <button
+                      className="btn btn-primary"
+                      onClick={openAddMenuModal}
+                    >
+                      <Plus size={16} /> Menü Ata
+                    </button>
+                  )}
+                </header>
+
+                <div className="table-card">
+                  <div className="table-toolbar">
+                    <input
+                      className="table-search"
+                      value={menuAssignmentSearch}
+                      onChange={(event) => setMenuAssignmentSearch(event.target.value)}
+                      placeholder="Menü, üniversite, yetkili veya tarih ara..."
+                    />
+                    <span className="table-count">{visibleMenuAssignments.length} kayıt</span>
+                  </div>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Haftalık Menü</th>
+                        <th>Üniversite</th>
+                        <th>Başlangıç Tarihi</th>
+                        <th>Bitiş Tarihi</th>
+                        <th>Durum</th>
+                        <th>Yayın Durumu</th>
+                        <th>Atayan Yetkili</th>
+                        <th className="actions-col">İşlemler</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleMenuAssignments.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="text-center">
+                            Kayıtlı menü ataması bulunamadı.
+                          </td>
+                        </tr>
+                      ) : (
+                        visibleMenuAssignments.map((menu) => {
+                          const uName =
+                            universities.find(
+                              (u) => u.id === menu.university_id,
+                            )?.university_name || "-";
+                          const assignerName =
+                            users.find((u) => u.id === menu.assigned_by)
+                              ?.full_name || "Bilinmiyor";
+                          const assignedWeeklyMenu = weeklyMenusById.get(Number(menu.weekly_menu_id));
+                          const menuLabel = assignedWeeklyMenu
+                            ? formatWeeklyMenuLabel(assignedWeeklyMenu)
+                            : menu.weekly_menu_id
+                              ? `Haftalık menü #${menu.weekly_menu_id}`
+                              : `Eski menü kaydı ${String(menu.menu_id).substring(0, 8)}...`;
+                          return (
+                            <tr key={menu.id}>
+                              <td>
+                                <strong>{menuLabel}</strong>
+                                {menu.weekly_menu_id && (
+                                  <small>Menü #{menu.weekly_menu_id}</small>
+                                )}
+                              </td>
+                              <td>
+                                <strong>{uName}</strong>
+                              </td>
+                              <td>
+                                {new Date(menu.start_date).toLocaleDateString(
+                                  "tr-TR",
+                                )}
+                              </td>
+                              <td>
+                                {new Date(menu.end_date).toLocaleDateString(
+                                  "tr-TR",
+                                )}
+                              </td>
+                              <td>
+                                <span
+                                  className={`pill pill-${menu.status.toLowerCase()}`}
+                                >
+                                  {menu.status === "ACTIVE"
+                                    ? "Aktif"
+                                    : menu.status === "INACTIVE"
+                                      ? "Pasif"
+                                      : "Arşivlendi"}
+                                </span>
+                              </td>
+                              <td>
+                                <span
+                                  className={`pill pill-${menu.is_published ? "active" : "inactive"}`}
+                                >
+                                  {menu.is_published ? "Yayınlandı" : "Taslak"}
+                                </span>
+                              </td>
+                              <td>{assignerName}</td>
+                              <td className="actions-col">
+                                {[
+                                  "SUPER_ADMIN",
+                                  "CATERING_ADMIN",
+                                  "DIETITIAN",
+                                ].includes(currentUser?.role_name || "") ? (
+                                  <>
+                                    <button
+                                      className="icon-btn btn-edit"
+                                      onClick={() => openEditMenuModal(menu)}
+                                    >
+                                      <Edit2 size={14} />
+                                    </button>
+                                    {["SUPER_ADMIN", "CATERING_ADMIN"].includes(
+                                      currentUser?.role_name || "",
+                                    ) && (
+                                      <button
+                                        className="icon-btn btn-delete"
+                                        onClick={() =>
+                                          handleDeleteMenu(menu.id)
+                                        }
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    )}
+                                  </>
+                                ) : (
+                                  "-"
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                </>
+              </GuardedCateringView>
+            }
+          />
+
+          <Route
+            path="companies"
+            element={
+              <GuardedCateringView role={currentUser?.role_name} accessKey="companies">
+                <>
+                  <header className="content-header">
+                    <div>
+                      <h1>Catering Firmaları & Lisans Planları</h1>
+                      <p>
+                        SaaS platformuna kayıtlı tüm catering firmaları,
+                        limitleri ve lisansları.
+                      </p>
+                    </div>
+                    <button
+                      className="btn btn-primary"
+                      onClick={openAddCompanyModal}
+                    >
+                      <Plus size={16} /> Yeni Firma Ekle
+                    </button>
+                  </header>
+
+                  <div className="table-card">
+                    <div className="table-toolbar">
+                      <input
+                        className="table-search"
+                        value={companySearch}
+                        onChange={(event) => setCompanySearch(event.target.value)}
+                        placeholder="Firma, vergi no, e-posta veya lisans ara..."
+                      />
+                      <span className="table-count">{visibleCompanies.length} kayıt</span>
+                    </div>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Firma Adı</th>
+                          <th>Vergi No</th>
+                          <th>E-posta</th>
+                          <th>Telefon</th>
+                          <th>Durum</th>
+                          <th>Lisans Planı</th>
+                          <th>Limitler (Üniv/Kullanıcı)</th>
+                          <th className="actions-col-wide">İşlemler</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visibleCompanies.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="text-center">
+                              Kayıtlı firma bulunamadı.
+                            </td>
+                          </tr>
+                        ) : (
+                          visibleCompanies.map((comp) => (
+                            <tr key={comp.id}>
+                              <td>
+                                <strong>{comp.company_name}</strong>
+                              </td>
+                              <td>{comp.tax_number ?? "-"}</td>
+                              <td>{comp.email ?? "-"}</td>
+                              <td>{comp.phone ?? "-"}</td>
+                              <td>
+                                <span
+                                  className={`pill pill-${comp.status ? "active" : "inactive"}`}
+                                >
+                                  {comp.status ? "Aktif" : "Pasif"}
+                                </span>
+                              </td>
+                              <td>
+                                <span className="badge badge-plan">
+                                  {comp.license?.plan_name ?? "-"}
+                                </span>
+                              </td>
+                              <td>
+                                {comp.license
+                                  ? `${comp.license.max_universities} / ${comp.license.max_users}`
+                                  : "Lisans bilgisi yok"}
+                              </td>
+                              <td className="actions-col-wide">
+                                <button
+                                  className="icon-btn btn-edit"
+                                  title="Firmayı Düzenle"
+                                  onClick={() => openEditCompanyModal(comp)}
+                                >
+                                  <Edit2 size={14} /> Firma
+                                </button>
+                                <button
+                                  className="icon-btn btn-license"
+                                  title="Lisansı Düzenle"
+                                  onClick={() => openEditLicenseModal(comp)}
+                                >
+                                  <Award size={14} /> Lisans
+                                </button>
+                                <button
+                                  className="icon-btn btn-delete"
+                                  title="Firmayı Sil"
+                                  onClick={() => handleDeleteCompany(comp.id)}
+                                >
+                                  <Trash2 size={14} /> Sil
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              </GuardedCateringView>
+            }
+          />
+
+          <Route
+            path="roles"
+            element={
+              <GuardedCateringView role={currentUser?.role_name} accessKey="roles">
+                <RoleAssignmentsView
+                  users={visibleUsers}
+                  universities={universities}
+                  currentUser={currentUser}
+                  onEditUser={openEditUserModal}
+                />
+              </GuardedCateringView>
+            }
+          />
+        </Route>
+
+        <Route
+          path="*"
+          element={<Navigate to="/modules/catering-management" replace />}
+        />
+      </Routes>
+
+      {/* Modals */}
+      {modalType && (
+        <div className="modal-backdrop" onClick={() => setModalType(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <header className="modal-header">
+              <h2>
+                {modalType === "add-univ" && "Üniversite Ekle"}
+                {modalType === "edit-univ" && "Üniversite Düzenle"}
+                {modalType === "add-user" && "Kullanıcı Ekle"}
+                {modalType === "edit-user" && "Kullanıcı Düzenle"}
+                {modalType === "add-menu" && "Menü Ata"}
+                {modalType === "edit-menu" && "Menü Atamasını Düzenle"}
+                {modalType === "add-company" && "Firma Ekle"}
+                {modalType === "edit-company" && "Firma Bilgilerini Düzenle"}
+                {modalType === "edit-license" &&
+                  `Lisans Yönetimi - ${selectedCompany?.company_name}`}
+              </h2>
+              <button className="close-btn" onClick={() => setModalType(null)}>
+                <X size={18} />
+              </button>
+            </header>
+
+            <div className="modal-body">
+              {/* Add / Edit University */}
+              {(modalType === "add-univ" || modalType === "edit-univ") && (
+                <>
+                  {currentUser?.role_name === "SUPER_ADMIN" &&
+                    modalType === "add-univ" && (
+                      <div className="input-group">
+                        <label>Firma</label>
+                        <select
+                          value={univForm.company_id}
+                          onChange={(e) =>
+                            setUnivForm({
+                              ...univForm,
+                              company_id: e.target.value,
+                            })
+                          }
+                        >
+                          {companies.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.company_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  <div className="input-group">
+                    <label>Üniversite Adı</label>
+                    <input
+                      type="text"
+                      value={univForm.university_name}
+                      onChange={(e) =>
+                        setUnivForm({
+                          ...univForm,
+                          university_name: e.target.value,
+                        })
+                      }
+                      placeholder="Örn. İstanbul Teknik Üniversitesi"
+                    />
+                  </div>
+                  <div className="input-row">
+                    <div className="input-group">
+                      <label>Şehir</label>
+                      <input
+                        type="text"
+                        value={univForm.city}
+                        onChange={(e) =>
+                          setUnivForm({ ...univForm, city: e.target.value })
+                        }
+                        placeholder="Örn. İstanbul"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label>Öğrenci Sayısı</label>
+                      <NumericStepper
+                        value={univForm.student_count}
+                        min={0}
+                        placeholder="0"
+                        onChange={(student_count) =>
+                          setUnivForm({ ...univForm, student_count })
+                        }
+                      />
+                    </div>
+                  </div>
+                  {modalType === "edit-univ" && (
+                    <div className="checkbox-group">
+                      <input
+                        type="checkbox"
+                        id="univ_status"
+                        checked={univForm.status}
+                        onChange={(e) =>
+                          setUnivForm({ ...univForm, status: e.target.checked })
+                        }
+                      />
+                      <label htmlFor="univ_status">Aktif Üniversite</label>
+                    </div>
+                  )}
+                  <button
+                    className="btn btn-primary"
+                    onClick={
+                      modalType === "add-univ" ? handleAddUniv : handleEditUniv
+                    }
+                  >
+                    {loading ? "Kaydediliyor..." : "Kaydet"}
+                  </button>
+                </>
+              )}
+
+              {/* Add / Edit User */}
+              {(modalType === "add-user" || modalType === "edit-user") && (
+                <>
+                  {currentUser?.role_name === "SUPER_ADMIN" &&
+                    modalType === "add-user" && (
+                      <div className="input-group">
+                        <label>Firma</label>
+                        <select
+                          value={userForm.company_id}
+                          onChange={(e) =>
+                            setUserForm({
+                              ...userForm,
+                              company_id: e.target.value,
+                            })
+                          }
+                        >
+                          {companies.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.company_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  {modalType === "add-user" && (
+                    <div className="input-group">
+                      <label>Auth User ID (Supabase UID)</label>
+                      <input
+                        type="text"
+                        value={userForm.auth_user_id}
+                        onChange={(e) =>
+                          setUserForm({
+                            ...userForm,
+                            auth_user_id: e.target.value,
+                          })
+                        }
+                        placeholder="UUID girin veya otomatik oluşanı kullanın"
+                      />
+                    </div>
+                  )}
+                  <div className="input-row">
+                    <div className="input-group">
+                      <label>E-posta</label>
+                      <input
+                        type="email"
+                        value={userForm.email}
+                        disabled={modalType === "edit-user"}
+                        onChange={(e) =>
+                          setUserForm({ ...userForm, email: e.target.value })
+                        }
+                        placeholder="Örn. ahmet@catering.com"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label>Ad Soyad</label>
+                      <input
+                        type="text"
+                        value={userForm.full_name}
+                        onChange={(e) =>
+                          setUserForm({
+                            ...userForm,
+                            full_name: e.target.value,
+                          })
+                        }
+                        placeholder="Ahmet Yılmaz"
+                      />
+                    </div>
+                  </div>
+                  <div className="input-row">
+                    <div className="input-group">
+                      <label>Telefon</label>
+                      <input
+                        type="text"
+                        value={userForm.phone}
+                        onChange={(e) =>
+                          setUserForm({ ...userForm, phone: e.target.value })
+                        }
+                        placeholder="555-1234"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label>Rol</label>
+                      <select
+                        value={userForm.role_name}
+                        onChange={(e) =>
+                          setUserForm({
+                            ...userForm,
+                            role_name: e.target.value,
+                            university_id: e.target.value === "PARTNER_COMPANY" ? "" : userForm.university_id,
+                          })
+                        }
+                      >
+                        {getAssignableRoles(currentUser?.role_name).map((role) => (
+                          <option key={role} value={role}>
+                            {ROLE_LABELS[role] || role}
+                          </option>
+                        ))}
+                       </select>
+                    </div>
+                  </div>
+                  {userForm.role_name !== "SUPER_ADMIN" &&
+                    userForm.role_name !== "CATERING_ADMIN" &&
+                    userForm.role_name !== "PARTNER_COMPANY" && (
+                      <div className="input-group">
+                        <label>Görevli Olduğu Üniversite</label>
+                        <select
+                          value={userForm.university_id}
+                          onChange={(e) =>
+                            setUserForm({
+                              ...userForm,
+                              university_id: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Seçiniz...</option>
+                          {universities.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.university_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  {modalType === "edit-user" && (
+                    <div className="checkbox-group">
+                      <input
+                        type="checkbox"
+                        id="user_active"
+                        checked={userForm.is_active}
+                        onChange={(e) =>
+                          setUserForm({
+                            ...userForm,
+                            is_active: e.target.checked,
+                          })
+                        }
+                      />
+                      <label htmlFor="user_active">
+                        Aktif Kullanıcı Hesabı
+                      </label>
+                    </div>
+                  )}
+                  <button
+                    className="btn btn-primary"
+                    onClick={
+                      modalType === "add-user" ? handleAddUser : handleEditUser
+                    }
+                  >
+                    {loading ? "Kaydediliyor..." : "Kaydet"}
+                  </button>
+                </>
+              )}
+
+              {/* Add / Edit Menu Assignment */}
+              {(modalType === "add-menu" || modalType === "edit-menu") && (
+                <>
+                  {currentUser?.role_name === "SUPER_ADMIN" &&
+                    modalType === "add-menu" && (
+                      <div className="input-group">
+                        <label>Firma</label>
+                        <select
+                          value={menuForm.company_id}
+                          onChange={(e) => {
+                            const companyUniversities = universities.filter(
+                              (university) => String(university.company_id) === String(e.target.value),
+                            );
+                            setMenuForm({
+                              ...menuForm,
+                              company_id: e.target.value,
+                              university_id: companyUniversities[0]?.id || "",
+                            });
+                          }}
+                        >
+                          {companies.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.company_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  {modalType === "add-menu" && (
+                    <div className="input-group">
+                      <label>Haftalık Menü</label>
+                      <select
+                        value={menuForm.weekly_menu_id}
+                        onChange={(e) => {
+                          const nextMenu = weeklyMenusById.get(Number(e.target.value));
+                          setMenuForm({
+                            ...menuForm,
+                            weekly_menu_id: e.target.value,
+                            start_date: nextMenu?.week_start_date || menuForm.start_date,
+                            end_date: nextMenu
+                              ? addDaysIso(nextMenu.week_start_date, 6)
+                              : menuForm.end_date,
+                          });
+                        }}
+                      >
+                        <option value="">Haftalık menü seçin</option>
+                        {weeklyMenus.map((menu) => (
+                          <option key={menu.id} value={menu.id}>
+                            {formatWeeklyMenuLabel(menu)}
+                          </option>
+                        ))}
+                      </select>
+                      {weeklyMenus.length === 0 && (
+                        <small>Önce AI Menü Planlayıcı üzerinden haftalık menü oluşturun.</small>
+                      )}
+                      {selectedWeeklyMenu && (
+                        <small>Seçilen menü #{selectedWeeklyMenu.id}</small>
+                      )}
+                    </div>
+                  )}
+                  {modalType === "add-menu" && (
+                    <div className="input-group">
+                      <label>Üniversite</label>
+                      <select
+                        value={menuForm.university_id}
+                        onChange={(e) =>
+                          setMenuForm({
+                            ...menuForm,
+                            university_id: e.target.value,
+                          })
+                        }
+                      >
+                        {menuAssignableUniversities.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.university_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div className="input-row">
+                    <div className="input-group">
+                      <label>Başlangıç Tarihi</label>
+                      <input
+                        type="date"
+                        value={menuForm.start_date}
+                        onChange={(e) =>
+                          setMenuForm({
+                            ...menuForm,
+                            start_date: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label>Bitiş Tarihi</label>
+                      <input
+                        type="date"
+                        value={menuForm.end_date}
+                        onChange={(e) =>
+                          setMenuForm({ ...menuForm, end_date: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="input-row">
+                    <div className="input-group">
+                      <label>Durum</label>
+                      <select
+                        value={menuForm.status}
+                        onChange={(e) =>
+                          setMenuForm({ ...menuForm, status: e.target.value })
+                        }
+                      >
+                        <option value="ACTIVE">Aktif</option>
+                        <option value="INACTIVE">Pasif</option>
+                        <option value="ARCHIVED">Arşivlendi</option>
+                      </select>
+                    </div>
+                    <div className="checkbox-group mt-large">
+                      <input
+                        type="checkbox"
+                        id="is_published"
+                        checked={menuForm.is_published}
+                        onChange={(e) =>
+                          setMenuForm({
+                            ...menuForm,
+                            is_published: e.target.checked,
+                          })
+                        }
+                      />
+                      <label htmlFor="is_published">Öğrencilere Yayınla</label>
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    onClick={
+                      modalType === "add-menu" ? handleAddMenu : handleEditMenu
+                    }
+                  >
+                    {loading ? "Kaydediliyor..." : "Menüyü Ata"}
+                  </button>
+                </>
+              )}
+
+              {/* Add / Edit Company */}
+              {(modalType === "add-company" ||
+                modalType === "edit-company") && (
+                <>
+                  <div className="input-group">
+                    <label>Firma Adı</label>
+                    <input
+                      type="text"
+                      value={companyForm.company_name}
+                      onChange={(e) =>
+                        setCompanyForm({
+                          ...companyForm,
+                          company_name: e.target.value,
+                        })
+                      }
+                      placeholder="Örn. Lale Catering A.Ş."
+                    />
+                  </div>
+                  <div className="input-row">
+                    <div className="input-group">
+                      <label>Vergi / TC Numarası</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={11}
+                        value={companyForm.tax_number}
+                        onChange={(e) =>
+                          setCompanyForm({
+                            ...companyForm,
+                            tax_number: digitsOnly(e.target.value, 11),
+                          })
+                        }
+                        placeholder="11 haneli numara"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label>Firma E-postası</label>
+                      <input
+                        type="email"
+                        value={companyForm.email}
+                        onChange={(e) =>
+                          setCompanyForm({
+                            ...companyForm,
+                            email: e.target.value,
+                          })
+                        }
+                        placeholder="kurumsal@lale.com"
+                      />
+                    </div>
+                  </div>
+                  <div className="input-row">
+                    <div className="input-group">
+                      <label>Telefon</label>
+                      <input
+                        type="text"
+                        value={companyForm.phone}
+                        onChange={(e) =>
+                          setCompanyForm({
+                            ...companyForm,
+                            phone: e.target.value,
+                          })
+                        }
+                        placeholder="555-555-5555"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label>Adres</label>
+                      <input
+                        type="text"
+                        value={companyForm.address}
+                        onChange={(e) =>
+                          setCompanyForm({
+                            ...companyForm,
+                            address: e.target.value,
+                          })
+                        }
+                        placeholder="Karanfil Sok. No: 12"
+                      />
+                    </div>
+                  </div>
+
+                  {modalType === "add-company" && (
+                    <fieldset className="license-fieldset">
+                      <legend>İlk Lisans Kurulumu</legend>
+                      <div className="input-row">
+                        <div className="input-group">
+                          <label>Plan Adı</label>
+                          <select
+                            value={companyForm.plan_name}
+                            onChange={(e) =>
+                              setCompanyForm({
+                                ...companyForm,
+                                plan_name: e.target.value,
+                              })
+                            }
+                          >
+                            <option value="Starter">Starter</option>
+                            <option value="Professional">Professional</option>
+                            <option value="Enterprise">Enterprise</option>
+                          </select>
+                        </div>
+                        <div className="input-group">
+                          <label>Max Üniversite Limiti</label>
+                          <NumericStepper
+                            value={companyForm.max_universities}
+                            min={1}
+                            placeholder="1"
+                            onChange={(max_universities) =>
+                              setCompanyForm({
+                                ...companyForm,
+                                max_universities,
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="input-group">
+                          <label>Max Kullanıcı Limiti</label>
+                          <NumericStepper
+                            value={companyForm.max_users}
+                            min={1}
+                            placeholder="1"
+                            onChange={(max_users) =>
+                              setCompanyForm({ ...companyForm, max_users })
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="input-row">
+                        <div className="input-group">
+                          <label>Başlangıç Tarihi</label>
+                          <input
+                            type="date"
+                            value={companyForm.start_date}
+                            onChange={(e) =>
+                              setCompanyForm({
+                                ...companyForm,
+                                start_date: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="input-group">
+                          <label>Bitiş Tarihi</label>
+                          <input
+                            type="date"
+                            value={companyForm.expire_date}
+                            onChange={(e) =>
+                              setCompanyForm({
+                                ...companyForm,
+                                expire_date: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                    </fieldset>
+                  )}
+
+                  {modalType === "edit-company" && (
+                    <div className="checkbox-group">
+                      <input
+                        type="checkbox"
+                        id="comp_status"
+                        checked={companyForm.status}
+                        onChange={(e) =>
+                          setCompanyForm({
+                            ...companyForm,
+                            status: e.target.checked,
+                          })
+                        }
+                      />
+                      <label htmlFor="comp_status">Aktif Firma Hesabı</label>
+                    </div>
+                  )}
+
+                  <button
+                    className="btn btn-primary"
+                    onClick={
+                      modalType === "add-company"
+                        ? handleAddCompany
+                        : handleEditCompany
+                    }
+                  >
+                    {loading ? "Kaydediliyor..." : "Firma Kaydet"}
+                  </button>
+                </>
+              )}
+
+              {/* Edit License */}
+              {modalType === "edit-license" && selectedLicense && (
+                <>
+                  <div className="input-row">
+                    <div className="input-group">
+                      <label>Plan Adı</label>
+                      <select
+                        value={licenseForm.plan_name}
+                        onChange={(e) =>
+                          setLicenseForm({
+                            ...licenseForm,
+                            plan_name: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="Starter">Starter</option>
+                        <option value="Professional">Professional</option>
+                        <option value="Enterprise">Enterprise</option>
+                      </select>
+                    </div>
+                    <div className="input-group">
+                      <label>Maksimum Üniversite</label>
+                      <NumericStepper
+                        value={licenseForm.max_universities}
+                        min={1}
+                        placeholder="1"
+                        onChange={(max_universities) =>
+                          setLicenseForm({
+                            ...licenseForm,
+                            max_universities,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label>Maksimum Kullanıcı</label>
+                      <NumericStepper
+                        value={licenseForm.max_users}
+                        min={1}
+                        placeholder="1"
+                        onChange={(max_users) =>
+                          setLicenseForm({ ...licenseForm, max_users })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="input-row">
+                    <div className="input-group">
+                      <label>Lisans Başlangıcı</label>
+                      <input
+                        type="date"
+                        value={licenseForm.start_date}
+                        onChange={(e) =>
+                          setLicenseForm({
+                            ...licenseForm,
+                            start_date: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label>Lisans Bitişi</label>
+                      <input
+                        type="date"
+                        value={licenseForm.expire_date}
+                        onChange={(e) =>
+                          setLicenseForm({
+                            ...licenseForm,
+                            expire_date: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="checkbox-group">
+                    <input
+                      type="checkbox"
+                      id="lic_active"
+                      checked={licenseForm.status}
+                      onChange={(e) =>
+                        setLicenseForm({
+                          ...licenseForm,
+                          status: e.target.checked,
+                        })
+                      }
+                    />
+                    <label htmlFor="lic_active">Lisans Aktif</label>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleEditLicense}
+                  >
+                    {loading
+                      ? "Kaydediliyor..."
+                      : "Lisans Bilgilerini Güncelle"}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <div className="catering-management-scope">
+      <CateringManagementContent />
+    </div>
+  );
+}
+

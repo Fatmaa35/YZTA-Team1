@@ -1,0 +1,343 @@
+import logging
+from datetime import date, datetime, timezone
+
+from fastapi import APIRouter, HTTPException
+from app.database import get_db
+from app.rate_limit import rate_limit
+from app.models.ingredient import (
+    Ingredient,
+    IngredientCreate,
+    IngredientUpdate,
+    IngredientBatch,
+    IngredientBatchCreate,
+    IngredientBatchUpdate,
+)
+from typing import Optional
+
+from pydantic import BaseModel
+
+from app.services.migros import MigrosError, fetch_ingredient_market_price, diagnose
+from app.services.stock import compute_alerts
+from app.services.consumption import (
+    ConsumptionError,
+    close_day,
+    forecast_depletion,
+    suggest_min_stock,
+)
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/ingredients", tags=["ingredients"])
+
+
+@router.get("/alerts")
+def stock_alerts():
+    """Akıllı stok uyarıları — expired/expiring_soon/shortages.
+    'Neye ne kadar ihtiyaç var' müdüre tek bakışta çıkar (otomatik siparişin temeli)."""
+    return compute_alerts(get_db())
+
+
+class CloseDayRequest(BaseModel):
+    service_date: Optional[date] = None  # verilmezse bugün
+
+
+@router.post("/close-day")
+def close_service_day(payload: CloseDayRequest):
+    """Günü Kapat: o günün menüsü servis edildi — gereken malzemeler partilerden
+    FEFO (önce SKT'si yakın) düşülür, tüketim loglanır. Stok fiili tüketimle iner."""
+    try:
+        return close_day(get_db(), payload.service_date)
+    except ConsumptionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.get("/consumption-logs")
+def consumption_logs(limit: int = 14):
+    """Son servis tüketim kayıtları (Günü Kapat geçmişi)."""
+    return get_db().table("consumption_logs").select("*").order(
+        "service_date", desc=True
+    ).limit(limit).execute().data
+
+
+@router.get("/forecast", dependencies=[rate_limit("ingredients-forecast", 30)])
+def depletion_forecast():
+    """AI Tükeniş Tahmini: tüketim hızı + gelecek menülerden her malzemenin
+    tükeniş tarihi ve 'en geç şu gün sipariş ver' önerisi."""
+    return forecast_depletion(get_db())
+
+
+@router.post("/ai-min-stock", dependencies=[rate_limit("ingredients-ai-min-stock", 20)])
+def apply_ai_min_stock():
+    """AI Min-Stok: tüketim hızından malzeme bazlı kritik eşik hesaplar ve uygular
+    (eşik = günlük tüketim × (teslim süresi + güvenlik payı))."""
+    changes = suggest_min_stock(get_db(), apply=True)
+    return {"updated": len(changes), "changes": changes}
+
+
+def _recompute_stock(ingredient_id: int) -> None:
+    """Parti değişince toplam stoğu VE ortalama birim fiyatı günceller.
+    ingredients.price = eldeki partilerin miktar-ağırlıklı ortalama birim fiyatı;
+    AI menü planlayıcı maliyet hesabında bu türetilmiş fiyatı kullanır."""
+    db = get_db()
+    batches = db.table("ingredient_batches").select("quantity, unit_price").eq("ingredient_id", ingredient_id).execute()
+    total = sum(float(b["quantity"]) for b in batches.data)
+    updates: dict = {"stock": total}
+
+    priced = [
+        (float(b["quantity"]), float(b["unit_price"]))
+        for b in batches.data
+        if b.get("unit_price") is not None and float(b["unit_price"]) > 0 and float(b["quantity"]) > 0
+    ]
+    weight = sum(q for q, _ in priced)
+    if weight > 0:
+        updates["price"] = round(sum(q * p for q, p in priced) / weight, 2)
+
+    db.table("ingredients").update(updates).eq("id", ingredient_id).execute()
+
+
+@router.get("/", response_model=list[Ingredient])
+def list_ingredients():
+    # Sabit sıralama: satır güncellenince (ör. Migros fiyat çekimi market_price yazar)
+    # Postgres satırı fiziksel olarak sona taşır; id sırası listeyi oynatmaz.
+    res = get_db().table("ingredients").select("*").order("id").execute()
+    return res.data
+
+
+@router.get("/market/prices")
+def list_market_prices():
+    """Tüm malzemelerin Migros eşleştirme/fiyat kayıtları (frontend satır yanında gösterir)."""
+    res = get_db().table("ingredient_market_prices").select("*").eq("source", "migros").execute()
+    return res.data
+
+
+@router.get("/market/health")
+def market_health():
+    """Migros fiyat servisi sağlık kontrolü (kanarya sorgu 'domates')."""
+    return diagnose(force_heal=False)
+
+
+@router.post("/market/self-heal", dependencies=[rate_limit("ingredients-self-heal", 10)])
+def market_self_heal():
+    """Servisi zorla kontrol eder: JSON alan adları değişmişse tespit eder."""
+    return diagnose(force_heal=True)
+
+
+@router.post("/{ingredient_id}/market/fetch", dependencies=[rate_limit("ingredients-market-fetch", 30)])
+def fetch_market_price(ingredient_id: int):
+    """Migros Fiyat Çek: malzemeyi Migros ürünüyle eşleştirir, güncel fiyatı ve GERÇEK
+    birim (kg/lt/adet) fiyatını çıkarır. Zayıf/işlenmiş eşleşme 'güvenilmez' işaretlenir;
+    o durumda malzeme fiyatı güncellenmez (menü planlayıcıya sızmaz)."""
+    db = get_db()
+    ing_res = db.table("ingredients").select("id, name, unit, market_price").eq("id", ingredient_id).execute()
+    if not ing_res.data:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+    ingredient = ing_res.data[0]
+
+    existing = (
+        db.table("ingredient_market_prices")
+        .select("product_url, unit_price")
+        .eq("ingredient_id", ingredient_id)
+        .eq("source", "migros")
+        .execute()
+    )
+    known_url = existing.data[0]["product_url"] if existing.data else None
+
+    try:
+        info = fetch_ingredient_market_price(ingredient["name"], ingredient["unit"], known_url)
+    except MigrosError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:  # ağ hatası vb.
+        logger.exception("Migros fiyat çekimi sırasında beklenmeyen hata")
+        raise HTTPException(status_code=502, detail="Migros'a şu an ulaşılamıyor. Lütfen tekrar deneyin.") from exc
+
+    # LLM ajanı Migros'ta uygun ham ürün BULAMADIYSA (ör. karnabahar/mandalina taze yok):
+    # kayıt yazma, malzeme verisine dokunma; frontend'e 'manuel giriş' durumu döndür.
+    if info.get("needs_manual_entry"):
+        # Eski yanlış eşleşmenin yazdığı market_price kalıntısını temizle (ör. 'Uludağ
+        # Mandalina içeceği'nin 556 TL/kg'ı) — AMA kullanıcının ELLE girdiği fiyata
+        # dokunma. Ayırt etme: market_price, eski Migros kaydının unit_price'ı ile
+        # birebir aynıysa o değer Migros'tan gelmiştir; farklıysa elle girilmiştir.
+        current_mp = ingredient.get("market_price")
+        stale_mp = existing.data[0].get("unit_price") if existing.data else None
+        came_from_migros = (
+            current_mp is not None and stale_mp is not None
+            and abs(float(current_mp) - float(stale_mp)) < 0.01
+        )
+        if came_from_migros:
+            db.table("ingredients").update({
+                "market_price": None, "last_price_checked_at": None,
+            }).eq("id", ingredient_id).execute()
+            current_mp = None
+        db.table("ingredient_market_prices").delete().eq("ingredient_id", ingredient_id).eq("source", "migros").execute()
+        return {
+            "ingredient_id": ingredient_id, "source": "migros",
+            "product_url": None, "product_name": None, "unit_price": None,
+            "reliable": False, "needs_verification": True, "needs_manual_entry": True,
+            "verified_by_llm": info.get("verified_by_llm", False),
+            "confidence": 0.0, "warning": info.get("warning"),
+            # elle girilmiş fiyat korunduysa frontend'e bildir (hücre onu gösterir)
+            "manual_price": current_mp,
+        }
+
+    # Güvenilmez eşleşme (ör. "Tavuk Göğsü" → "Tavuk Baget") malzemenin kendi
+    # verisini (birim/fiyat) BOZMAMALI: kayıt tutulur ama malzeme güncellenmez,
+    # menü planlayıcı bu şüpheli fiyatı kullanmaz. UI 'doğrulama gerekli' gösterir.
+    reliable = bool(info.get("reliable"))
+
+    detected_unit = info.get("detected_unit")
+    unit_changed = False
+    new_unit = None
+    final_unit = ingredient["unit"]
+    # Migros'un gerçek satış birimi farklıysa malzemenin birimini eşitle (yalnızca güvenilirse)
+    if reliable and detected_unit and detected_unit != ingredient["unit"]:
+        db.table("ingredients").update({"unit": detected_unit}).eq("id", ingredient_id).execute()
+        final_unit = detected_unit
+        unit_changed = True
+        new_unit = detected_unit
+
+    row = {
+        "ingredient_id": ingredient_id,
+        "source": "migros",
+        "product_url": info["product_url"],
+        "product_name": info["product_name"],
+        "pack_quantity": info.get("pack_quantity"),
+        "pack_unit": final_unit,
+        "last_price": info["last_price"],
+        "unit_price": info.get("unit_price"),
+        "unit_matched": info.get("unit_price") is not None,
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+    }
+    saved = (
+        db.table("ingredient_market_prices")
+        .upsert(row, on_conflict="ingredient_id,source")
+        .execute()
+    )
+
+    # market_price'ı (mevsimsel analiz + planlayıcı kullanır) YALNIZCA güvenilir
+    # sonuçta güncelle. Güvenilmezse eski/elle girilmiş değer korunur.
+    if reliable and info.get("unit_price"):
+        db.table("ingredients").update({
+            "market_price": info["unit_price"],
+            "last_price_checked_at": date.today().isoformat(),
+        }).eq("id", ingredient_id).execute()
+
+    result = saved.data[0] if saved.data else row
+    result["unit_changed"] = unit_changed
+    result["new_unit"] = new_unit
+    result["reliable"] = reliable
+    result["needs_verification"] = not reliable
+    result["needs_manual_entry"] = False
+    result["verified_by_llm"] = info.get("verified_by_llm", False)
+    result["confidence"] = info.get("confidence")
+    result["warning"] = info.get("warning")
+    return result
+
+
+@router.get("/{ingredient_id}", response_model=Ingredient)
+def get_ingredient(ingredient_id: int):
+    res = get_db().table("ingredients").select("*").eq("id", ingredient_id).single().execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+    return res.data
+
+
+@router.post("/", response_model=Ingredient, status_code=201)
+def create_ingredient(payload: IngredientCreate):
+    res = get_db().table("ingredients").insert({**payload.model_dump(mode="json"), "stock": 0}).execute()
+    return res.data[0]
+
+
+@router.patch("/{ingredient_id}", response_model=Ingredient)
+def update_ingredient(ingredient_id: int, payload: IngredientUpdate):
+    updates = payload.model_dump(mode="json", exclude_none=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    res = get_db().table("ingredients").update(updates).eq("id", ingredient_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+    return res.data[0]
+
+
+@router.delete("/{ingredient_id}", status_code=204)
+def delete_ingredient(ingredient_id: int):
+    get_db().table("ingredients").delete().eq("id", ingredient_id).execute()
+
+
+@router.get("/{ingredient_id}/batches", response_model=list[IngredientBatch])
+def list_batches(ingredient_id: int):
+    res = (
+        get_db()
+        .table("ingredient_batches")
+        .select("*")
+        .eq("ingredient_id", ingredient_id)
+        .order("purchase_date", desc=True)
+        .execute()
+    )
+    return res.data
+
+
+def _entry_warnings(db, ingredient_id: int, quantity: float, unit_price: float | None) -> list[str]:
+    """Veri Bekçisi: şüpheli girişleri (yanlış fiyat/aşırı miktar) kayıt anında yakalar.
+    Engellemez, uyarır — '2000 kg mercimek' gibi hatalar sisteme sessizce girmesin."""
+    warnings: list[str] = []
+    ing = db.table("ingredients").select(
+        "name, unit, price, market_price, min_stock"
+    ).eq("id", ingredient_id).execute().data
+    if not ing:
+        return warnings
+    ing = ing[0]
+    ref = float(ing.get("market_price") or ing.get("price") or 0)
+    if unit_price and ref > 0:
+        if unit_price > ref * 2.5:
+            warnings.append(
+                f"Birim fiyat ({unit_price} TL) referans fiyatın ({ref} TL) 2.5 katından fazla — girişi kontrol edin.")
+        elif unit_price < ref * 0.4:
+            warnings.append(
+                f"Birim fiyat ({unit_price} TL) referans fiyatın ({ref} TL) yarısından çok düşük — girişi kontrol edin.")
+    min_stock = float(ing.get("min_stock") or 0)
+    if min_stock > 0 and quantity > min_stock * 20:
+        warnings.append(
+            f"Miktar ({quantity} {ing.get('unit')}) kritik eşiğin ({min_stock}) 20 katından fazla — sıfır hatası olabilir.")
+    if unit_price and quantity * unit_price > 100_000:
+        warnings.append(f"Parti tutarı {round(quantity * unit_price, 2)} TL — olağan dışı büyüklükte.")
+    return warnings
+
+
+@router.post("/{ingredient_id}/batches", status_code=201)
+def create_batch(ingredient_id: int, payload: IngredientBatchCreate):
+    db = get_db()
+    data = payload.model_dump(mode="json")
+    warnings = _entry_warnings(db, ingredient_id, float(data.get("quantity") or 0),
+                               data.get("unit_price"))
+    res = db.table("ingredient_batches").insert({
+        **data,
+        "ingredient_id": ingredient_id,
+        "initial_quantity": data.get("quantity"),  # satın alınan miktar (gider hesabının kaynağı)
+    }).execute()
+    _recompute_stock(ingredient_id)
+    return {**res.data[0], "warnings": warnings}
+
+
+@router.patch("/{ingredient_id}/batches/{batch_id}", response_model=IngredientBatch)
+def update_batch(ingredient_id: int, batch_id: int, payload: IngredientBatchUpdate):
+    updates = payload.model_dump(mode="json", exclude_none=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    res = (
+        get_db()
+        .table("ingredient_batches")
+        .update(updates)
+        .eq("id", batch_id)
+        .eq("ingredient_id", ingredient_id)
+        .execute()
+    )
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    _recompute_stock(ingredient_id)
+    return res.data[0]
+
+
+@router.delete("/{ingredient_id}/batches/{batch_id}", status_code=204)
+def delete_batch(ingredient_id: int, batch_id: int):
+    get_db().table("ingredient_batches").delete().eq("id", batch_id).eq("ingredient_id", ingredient_id).execute()
+    _recompute_stock(ingredient_id)

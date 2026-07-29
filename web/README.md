@@ -21,13 +21,11 @@
 <h1 align="center">TabloDot</h1>
 
 <p align="center">
-  <img src="bootcampFiles/sprintTwo/screenshots/logo.png" alt="TabloDot Logo" width="220">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/logo.png" alt="TabloDot Logo" width="220">
 </p>
 
 
 # 🔗 Proje Repoları
-
-> **Canlı Demo:** [https://tablodot.onrender.com/](https://tablodot.onrender.com/)
 
 | Bölüm | Repository |
 | :--- | :--- |
@@ -35,72 +33,6 @@
 | **Mobil Uygulama** | [sudenazkalaycik/YZA-Team1-TabloDot](https://github.com/sudenazkalaycik/YZA-Team1-TabloDot) |
 
 > Web ve mobil geliştirme süreçleri ayrı GitHub repoları üzerinden yürütülmektedir.
-
----
-
-# 🚀 Projeyi Çalıştırma
-
-Bu repo içerisinde web ve mobil uygulama kodları ayrı klasörler altında yer almaktadır.
-
-## Web Uygulaması
-
-Web projesi `web` klasörü altında yer alır. Backend FastAPI, frontend ise React/Vite ile geliştirilmiştir.
-
-### Backend
-
-```bash
-cd web/backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
-Backend varsayılan olarak `http://127.0.0.1:8000` adresinde çalışır.
-
-### Frontend
-
-Yeni bir terminal açarak:
-
-```bash
-cd web/frontend
-npm install
-npm run dev
-```
-
-Frontend varsayılan olarak Vite tarafından verilen local adreste çalışır. Genellikle:
-
-```text
-http://localhost:5173
-```
-
-## Mobil Uygulama
-
-Mobil proje `mobile` klasörü altında yer alır ve Expo ile geliştirilmiştir.
-
-```bash
-cd mobile
-npm install
-npm start
-```
-
-`npm start` komutu Expo geliştirme sunucusunu başlatır. Terminalde veya tarayıcıda görünen QR kodu Expo Go uygulamasıyla okutarak projeyi fiziksel telefonda çalıştırabilirsiniz.
-
-Android emülatörde veya bağlı Android cihazda çalıştırmak için:
-
-```bash
-npm run android
-```
-
-iOS simülatörde çalıştırmak için:
-
-```bash
-npm run ios
-```
-
-Tarayıcıda web sürümü olarak çalıştırmak için:
-
-```bash
-npm run web
-```
 
 ---
 
@@ -150,8 +82,8 @@ Sistemin temel amacı;
 
 - Supabase (PostgreSQL)
 
-<a href="bootcampFiles/sprintOne/database-schemaDiagram.png" target="_blank">
-  <img src="bootcampFiles/sprintOne/database-schemaDiagram.png" alt="Database Schema Diagram">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/database-schemaDiagram.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/database-schemaDiagram.png" alt="Database Schema Diagram">
 </a>
 
 ## Yapay Zeka
@@ -259,14 +191,14 @@ Toplam proje kapsamı **250 Story Point** olarak planlanmıştır. Sprint 1'de t
 
 🔗 **[Sprint 1 Trello Board](https://trello.com/invite/b/6a39b01ac7486cd960963d06/ATTI61c96b260ca26974531643958cc5a9d3E8F8A550/bootcamp1st-sprint)**
 
-<a href="bootcampFiles/sprintOne/boardUpdate/27.png" target="_blank">
-  <img src="bootcampFiles/sprintOne/boardUpdate/27.png" alt="Sprint 1 Trello Board">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/27.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/27.png" alt="Sprint 1 Trello Board">
 </a>
 
 🔗 **[Sprint 2 Trello Board](https://trello.com/invite/b/6a4d297105582150ec6b151f/ATTI531ec30d84b283d268e2386c35c0979a7105D64C/bootcamp-2st-sprint)**
 
-<a href="bootcampFiles/sprintTwo/BoardUpdate/9.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/BoardUpdate/9.png" alt="Sprint 2 Trello Board">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/9.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/9.png" alt="Sprint 2 Trello Board">
 </a>
 
 ---
@@ -298,20 +230,20 @@ Sprint 1 kapsamında proje için User Stories belirlenmiş, önceliklendirilmiş
 
 Takım içi günlük iletişim ve ilerleme takibi Slack ve WhatsApp üzerinden asenkron olarak yürütülmektedir.
 
-<a href="bootcampFiles/sprintOne/boardUpdate/1.png" target="_blank">
-  <img src="bootcampFiles/sprintOne/boardUpdate/1.png" alt="Daily Scrum Toplantı 1">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/1.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/1.png" alt="Daily Scrum Toplantı 1">
 </a>
 
-<a href="bootcampFiles/sprintOne/boardUpdate/toplanti1.png" target="_blank">
-  <img src="bootcampFiles/sprintOne/boardUpdate/toplanti1.png" alt="Daily Scrum Toplantı 2">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/toplanti1.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/toplanti1.png" alt="Daily Scrum Toplantı 2">
 </a>
 
-<a href="bootcampFiles/sprintOne/boardUpdate/toplanti2.jpeg" target="_blank">
-  <img src="bootcampFiles/sprintOne/boardUpdate/toplanti2.jpeg" alt="Daily Scrum Toplantı 3">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/toplanti2.jpeg" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/toplanti2.jpeg" alt="Daily Scrum Toplantı 3">
 </a>
 
-<a href="bootcampFiles/sprintOne/boardUpdate/toplanti3.png" target="_blank">
-  <img src="bootcampFiles/sprintOne/boardUpdate/toplanti3.png" alt="Daily Scrum Toplantı 4">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/toplanti3.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/toplanti3.png" alt="Daily Scrum Toplantı 4">
 </a>
 
 ---
@@ -323,40 +255,40 @@ Sprint planlaması ve görev takibi Trello üzerinden yürütülmektedir.
 <details>
 <summary><strong>Güncellemeler</strong></summary>
 
-<a href="bootcampFiles/sprintOne/boardUpdate/2.png" target="_blank">
-  <img src="bootcampFiles/sprintOne/boardUpdate/2.png" alt="Sprint Board Update 2">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/2.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/2.png" alt="Sprint Board Update 2">
 </a>
 
-<a href="bootcampFiles/sprintOne/boardUpdate/3.png" target="_blank">
-  <img src="bootcampFiles/sprintOne/boardUpdate/3.png" alt="Sprint Board Update 3">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/3.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/3.png" alt="Sprint Board Update 3">
 </a>
 
-<a href="bootcampFiles/sprintOne/boardUpdate/4.png" target="_blank">
-  <img src="bootcampFiles/sprintOne/boardUpdate/4.png" alt="Sprint Board Update 4">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/4.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/4.png" alt="Sprint Board Update 4">
 </a>
 
-<a href="bootcampFiles/sprintOne/boardUpdate/5.png" target="_blank">
-  <img src="bootcampFiles/sprintOne/boardUpdate/5.png" alt="Sprint Board Update 5">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/5.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/5.png" alt="Sprint Board Update 5">
 </a>
 
-<a href="bootcampFiles/sprintOne/boardUpdate/6.png" target="_blank">
-  <img src="bootcampFiles/sprintOne/boardUpdate/6.png" alt="Sprint Board Update 6">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/6.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/6.png" alt="Sprint Board Update 6">
 </a>
 
-<a href="bootcampFiles/sprintOne/boardUpdate/21.png" target="_blank">
-  <img src="bootcampFiles/sprintOne/boardUpdate/21.png" alt="Sprint Board Update 21">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/21.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/21.png" alt="Sprint Board Update 21">
 </a>
 
-<a href="bootcampFiles/sprintOne/boardUpdate/22.png" target="_blank">
-  <img src="bootcampFiles/sprintOne/boardUpdate/22.png" alt="Sprint Board Update 22">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/22.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/22.png" alt="Sprint Board Update 22">
 </a>
 
-<a href="bootcampFiles/sprintOne/boardUpdate/24.png" target="_blank">
-  <img src="bootcampFiles/sprintOne/boardUpdate/24.png" alt="Sprint Board Update 24">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/24.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/24.png" alt="Sprint Board Update 24">
 </a>
 
-<a href="bootcampFiles/sprintOne/boardUpdate/26.png" target="_blank">
-  <img src="bootcampFiles/sprintOne/boardUpdate/26.png" alt="Sprint Board Update 26">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/26.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintOne/boardUpdate/26.png" alt="Sprint Board Update 26">
 </a>
 
 </details>
@@ -441,16 +373,16 @@ Sprint 2 kapsamında Sprint 1'de oluşturulan backlog yapısı genişletilmiş, 
 
 Takım içi günlük iletişim ve ilerleme takibi Whatsapp ve Meets üzerinden asenkron olarak yürütülmektedir.
 
-<a href="bootcampFiles/sprintTwo/BoardUpdate/toplanti4.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/BoardUpdate/toplanti4.png" alt="Daily Scrum Toplantı 4">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/toplanti4.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/toplanti4.png" alt="Daily Scrum Toplantı 4">
 </a>
 
-<a href="bootcampFiles/sprintTwo/BoardUpdate/toplanti5.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/BoardUpdate/toplanti5.png" alt="Daily Scrum Toplantı 5">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/toplanti5.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/toplanti5.png" alt="Daily Scrum Toplantı 5">
 </a>
 
-<a href="bootcampFiles/sprintTwo/BoardUpdate/toplanti6.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/BoardUpdate/toplanti6.png" alt="Daily Scrum Toplantı 6">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/toplanti6.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/toplanti6.png" alt="Daily Scrum Toplantı 6">
 </a>
 
 ---
@@ -462,40 +394,40 @@ Sprint planlaması ve görev takibi Trello üzerinden yürütülmektedir.
 <details>
 <summary><strong>Güncellemeler</strong></summary>
 
-<a href="bootcampFiles/sprintTwo/BoardUpdate/1.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/BoardUpdate/1.png" alt="Sprint 2 Board Update 1">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/1.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/1.png" alt="Sprint 2 Board Update 1">
 </a>
 
-<a href="bootcampFiles/sprintTwo/BoardUpdate/2.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/BoardUpdate/2.png" alt="Sprint 2 Board Update 2">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/2.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/2.png" alt="Sprint 2 Board Update 2">
 </a>
 
-<a href="bootcampFiles/sprintTwo/BoardUpdate/3.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/BoardUpdate/3.png" alt="Sprint 2 Board Update 3">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/3.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/3.png" alt="Sprint 2 Board Update 3">
 </a>
 
-<a href="bootcampFiles/sprintTwo/BoardUpdate/4.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/BoardUpdate/4.png" alt="Sprint 2 Board Update 4">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/4.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/4.png" alt="Sprint 2 Board Update 4">
 </a>
 
-<a href="bootcampFiles/sprintTwo/BoardUpdate/5.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/BoardUpdate/5.png" alt="Sprint 2 Board Update 5">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/5.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/5.png" alt="Sprint 2 Board Update 5">
 </a>
 
-<a href="bootcampFiles/sprintTwo/BoardUpdate/6.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/BoardUpdate/6.png" alt="Sprint 2 Board Update 6">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/6.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/6.png" alt="Sprint 2 Board Update 6">
 </a>
 
-<a href="bootcampFiles/sprintTwo/BoardUpdate/7.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/BoardUpdate/7.png" alt="Sprint 2 Board Update 7">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/7.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/7.png" alt="Sprint 2 Board Update 7">
 </a>
 
-<a href="bootcampFiles/sprintTwo/BoardUpdate/8.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/BoardUpdate/8.png" alt="Sprint 2 Board Update 8">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/8.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/8.png" alt="Sprint 2 Board Update 8">
 </a>
 
-<a href="bootcampFiles/sprintTwo/BoardUpdate/9.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/BoardUpdate/9.png" alt="Sprint 2 Board Update 9">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/9.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/9.png" alt="Sprint 2 Board Update 9">
 </a>
 
 </details>
@@ -520,92 +452,92 @@ Sprint 2 sonunda;
 <details>
 <summary><strong>Ürün Görselleri</strong></summary>
 
-<a href="bootcampFiles/sprintTwo/screenshots/9.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/9.png" alt="Sprint 2 Ürün Görseli 9">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/9.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/9.png" alt="Sprint 2 Ürün Görseli 9">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/10.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/10.png" alt="Sprint 2 Ürün Görseli 10">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/10.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/10.png" alt="Sprint 2 Ürün Görseli 10">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/11.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/11.png" alt="Sprint 2 Ürün Görseli 11">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/11.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/11.png" alt="Sprint 2 Ürün Görseli 11">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/12.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/12.png" alt="Sprint 2 Ürün Görseli 12">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/12.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/12.png" alt="Sprint 2 Ürün Görseli 12">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/13.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/13.png" alt="Sprint 2 Ürün Görseli 13">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/13.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/13.png" alt="Sprint 2 Ürün Görseli 13">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/14.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/14.png" alt="Sprint 2 Ürün Görseli 14">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/14.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/14.png" alt="Sprint 2 Ürün Görseli 14">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/15.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/15.png" alt="Sprint 2 Ürün Görseli 15">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/15.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/15.png" alt="Sprint 2 Ürün Görseli 15">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/16.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/16.png" alt="Sprint 2 Ürün Görseli 16">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/16.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/16.png" alt="Sprint 2 Ürün Görseli 16">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/17.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/17.png" alt="Sprint 2 Ürün Görseli 17">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/17.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/17.png" alt="Sprint 2 Ürün Görseli 17">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/18.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/18.png" alt="Sprint 2 Ürün Görseli 18">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/18.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/18.png" alt="Sprint 2 Ürün Görseli 18">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/19.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/19.png" alt="Sprint 2 Ürün Görseli 19">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/19.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/19.png" alt="Sprint 2 Ürün Görseli 19">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/20.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/20.png" alt="Sprint 2 Ürün Görseli 20">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/20.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/20.png" alt="Sprint 2 Ürün Görseli 20">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/21.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/21.png" alt="Sprint 2 Ürün Görseli 21">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/21.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/21.png" alt="Sprint 2 Ürün Görseli 21">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/22.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/22.png" alt="Sprint 2 Ürün Görseli 22">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/22.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/22.png" alt="Sprint 2 Ürün Görseli 22">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/23.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/23.png" alt="Sprint 2 Ürün Görseli 23">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/23.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/23.png" alt="Sprint 2 Ürün Görseli 23">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/24.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/24.png" alt="Sprint 2 Ürün Görseli 24">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/24.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/24.png" alt="Sprint 2 Ürün Görseli 24">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/25.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/25.png" alt="Sprint 2 Ürün Görseli 25">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/25.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/25.png" alt="Sprint 2 Ürün Görseli 25">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/26.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/26.png" alt="Sprint 2 Ürün Görseli 26">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/26.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/26.png" alt="Sprint 2 Ürün Görseli 26">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/27.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/27.png" alt="Sprint 2 Ürün Görseli 27">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/27.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/27.png" alt="Sprint 2 Ürün Görseli 27">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/28.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/28.png" alt="Sprint 2 Ürün Görseli 28">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/28.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/28.png" alt="Sprint 2 Ürün Görseli 28">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/29.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/29.png" alt="Sprint 2 Ürün Görseli 29">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/29.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/29.png" alt="Sprint 2 Ürün Görseli 29">
 </a>
 
-<a href="bootcampFiles/sprintTwo/screenshots/30.png" target="_blank">
-  <img src="bootcampFiles/sprintTwo/screenshots/30.png" alt="Sprint 2 Ürün Görseli 30">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/30.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/30.png" alt="Sprint 2 Ürün Görseli 30">
 </a>
 
 </details>
@@ -685,16 +617,16 @@ Takım içi günlük iletişim ve ilerleme takibi WhatsApp ve Meets üzerinden a
 <details>
 <summary><strong>Daily Scrum Görselleri</strong></summary>
 
-<a href="bootcampFiles/sprintThree/BoardUpdate/toplanti7.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/BoardUpdate/toplanti7.png" alt="Daily Scrum Toplantı 7">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/toplanti7.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/toplanti7.png" alt="Daily Scrum Toplantı 7">
 </a>
 
-<a href="bootcampFiles/sprintThree/BoardUpdate/toplanti8.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/BoardUpdate/toplanti8.png" alt="Daily Scrum Toplantı 8">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/toplanti8.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/toplanti8.png" alt="Daily Scrum Toplantı 8">
 </a>
 
-<a href="bootcampFiles/sprintThree/BoardUpdate/toplanti9.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/BoardUpdate/toplanti9.png" alt="Daily Scrum Toplantı 9">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/toplanti9.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/toplanti9.png" alt="Daily Scrum Toplantı 9">
 </a>
 
 </details>
@@ -708,44 +640,44 @@ Sprint planlaması ve görev takibi Trello üzerinden yürütülmektedir.
 <details>
 <summary><strong>Güncellemeler</strong></summary>
 
-<a href="bootcampFiles/sprintThree/BoardUpdate/1.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/BoardUpdate/1.png" alt="Sprint 3 Board Update 1">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/1.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/1.png" alt="Sprint 3 Board Update 1">
 </a>
 
-<a href="bootcampFiles/sprintThree/BoardUpdate/2.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/BoardUpdate/2.png" alt="Sprint 3 Board Update 2">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/2.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/2.png" alt="Sprint 3 Board Update 2">
 </a>
 
-<a href="bootcampFiles/sprintThree/BoardUpdate/3.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/BoardUpdate/3.png" alt="Sprint 3 Board Update 3">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/3.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/3.png" alt="Sprint 3 Board Update 3">
 </a>
 
-<a href="bootcampFiles/sprintThree/BoardUpdate/4.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/BoardUpdate/4.png" alt="Sprint 3 Board Update 4">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/4.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/4.png" alt="Sprint 3 Board Update 4">
 </a>
 
-<a href="bootcampFiles/sprintThree/BoardUpdate/5.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/BoardUpdate/5.png" alt="Sprint 3 Board Update 5">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/5.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/5.png" alt="Sprint 3 Board Update 5">
 </a>
 
-<a href="bootcampFiles/sprintThree/BoardUpdate/6.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/BoardUpdate/6.png" alt="Sprint 3 Board Update 6">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/6.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/6.png" alt="Sprint 3 Board Update 6">
 </a>
 
-<a href="bootcampFiles/sprintThree/BoardUpdate/7.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/BoardUpdate/7.png" alt="Sprint 3 Board Update 7">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/7.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/7.png" alt="Sprint 3 Board Update 7">
 </a>
 
-<a href="bootcampFiles/sprintThree/BoardUpdate/8.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/BoardUpdate/8.png" alt="Sprint 3 Board Update 8">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/8.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/8.png" alt="Sprint 3 Board Update 8">
 </a>
 
-<a href="bootcampFiles/sprintThree/BoardUpdate/9.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/BoardUpdate/9.png" alt="Sprint 3 Board Update 9">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/9.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/9.png" alt="Sprint 3 Board Update 9">
 </a>
 
-<a href="bootcampFiles/sprintThree/BoardUpdate/10.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/BoardUpdate/10.png" alt="Sprint 3 Board Update 10">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/10.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/10.png" alt="Sprint 3 Board Update 10">
 </a>
 
 </details>
@@ -772,40 +704,40 @@ Sprint 3 sonunda;
 <details>
 <summary><strong>Ürün Görselleri</strong></summary>
 
-<a href="bootcampFiles/sprintThree/screenShots/1.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/screenShots/1.png" alt="Sprint 3 Ürün Görseli 1">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/1.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/1.png" alt="Sprint 3 Ürün Görseli 1">
 </a>
 
-<a href="bootcampFiles/sprintThree/screenShots/2.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/screenShots/2.png" alt="Sprint 3 Ürün Görseli 2">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/2.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/2.png" alt="Sprint 3 Ürün Görseli 2">
 </a>
 
-<a href="bootcampFiles/sprintThree/screenShots/3.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/screenShots/3.png" alt="Sprint 3 Ürün Görseli 3">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/3.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/3.png" alt="Sprint 3 Ürün Görseli 3">
 </a>
 
-<a href="bootcampFiles/sprintThree/screenShots/4.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/screenShots/4.png" alt="Sprint 3 Ürün Görseli 4">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/4.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/4.png" alt="Sprint 3 Ürün Görseli 4">
 </a>
 
-<a href="bootcampFiles/sprintThree/screenShots/5.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/screenShots/5.png" alt="Sprint 3 Ürün Görseli 5">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/5.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/5.png" alt="Sprint 3 Ürün Görseli 5">
 </a>
 
-<a href="bootcampFiles/sprintThree/screenShots/6.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/screenShots/6.png" alt="Sprint 3 Ürün Görseli 6">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/6.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/6.png" alt="Sprint 3 Ürün Görseli 6">
 </a>
 
-<a href="bootcampFiles/sprintThree/screenShots/7.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/screenShots/7.png" alt="Sprint 3 Ürün Görseli 7">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/7.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/7.png" alt="Sprint 3 Ürün Görseli 7">
 </a>
 
-<a href="bootcampFiles/sprintThree/screenShots/8.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/screenShots/8.png" alt="Sprint 3 Ürün Görseli 8">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/8.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/8.png" alt="Sprint 3 Ürün Görseli 8">
 </a>
 
-<a href="bootcampFiles/sprintThree/screenShots/9.png" target="_blank">
-  <img src="bootcampFiles/sprintThree/screenShots/9.png" alt="Sprint 3 Ürün Görseli 9">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/9.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/9.png" alt="Sprint 3 Ürün Görseli 9">
 </a>
 
 </details>

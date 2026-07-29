@@ -1,0 +1,67 @@
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor and IDE files
+.vscode/
+.idea/
+.agents/
+*.swp
+*.swo
+*~
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build output
+dist/
+build/
+.next/
+.nuxt/
+coverage/
+frontend/dist/
+frontend/.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Mobile
+*.apk
+*.aab
+*.ipa
+.dart_tool/
+.gradle/
+
+# Local databases
+*.sqlite
+*.sqlite3
+*.db
+tmp/
+temp/
+reports/
+htmlcov/
+backend/app/services/a101_learned.json

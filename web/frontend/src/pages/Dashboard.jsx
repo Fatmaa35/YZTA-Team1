@@ -1,0 +1,616 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { getDashboardStats } from "../api/dashboard";
+import { getMenus, getMenu } from "../modules/ai-menu-planner/api/aiMenuPlanner";
+import LoadingSpinner from "../components/LoadingSpinner";
+
+const TR_MONTHS_SHORT = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+const ALL_DAYS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
+const ALL_DAYS_SHORT = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+
+const formatShort = (date) => `${String(date.getDate()).padStart(2, "0")} ${TR_MONTHS_SHORT[date.getMonth()]}`;
+
+const startOfDay = (date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const sameDay = (a, b) => startOfDay(a).getTime() === startOfDay(b).getTime();
+
+// Haftalar Pazartesi bazlıdır; hafta ortası tarihle kaydedilmiş menüler de aynı haftada gruplansın.
+const mondayOf = (date) => {
+  const d = startOfDay(date);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d;
+};
+
+const isoLocal = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+const operationShortcuts = [
+  { label: "Bugünkü Menü", detail: "Planlanan öğünler", to: "/modules/ai-menu-planner", icon: "calendar", tone: "var(--accent)" },
+  { label: "Malzeme Deposu", detail: "Stok ve parti takibi", to: "/ingredients", icon: "box", tone: "var(--green)" },
+  { label: "Siparişler", detail: "Taslak ve teslimat", to: "/orders", icon: "cart", tone: "var(--amber)" },
+  { label: "Harcamalar", detail: "Ay bazlı giderler", to: "/expenses", icon: "wallet", tone: "var(--red)" },
+  { label: "Sürdürülebilirlik", detail: "Karbon ve eko skor", to: "/modules/sustainabilityscore", icon: "leaf", tone: "var(--green)" },
+  { label: "İhale & Fatura", detail: "Teklif ve hakediş", to: "/modules/tender-invoice-management", icon: "file", tone: "var(--purple)" },
+];
+
+function ShortcutIcon({ name, size = 20 }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+  };
+  const icons = {
+    calendar: (
+      <svg {...common}>
+        <path d="M7 3v4" />
+        <path d="M17 3v4" />
+        <rect x="4" y="5" width="16" height="16" rx="2" />
+        <path d="M4 10h16" />
+        <path d="M8 14h3" />
+        <path d="M8 17h2" />
+      </svg>
+    ),
+    box: (
+      <svg {...common}>
+        <path d="M21 8.5 12 3 3 8.5l9 5.5 9-5.5Z" />
+        <path d="M3 8.5V16l9 5 9-5V8.5" />
+        <path d="M12 14v7" />
+      </svg>
+    ),
+    cart: (
+      <svg {...common}>
+        <path d="M4 5h2l2 10h9l2-7H7" />
+        <circle cx="10" cy="19" r="1.5" />
+        <circle cx="17" cy="19" r="1.5" />
+      </svg>
+    ),
+    wallet: (
+      <svg {...common}>
+        <path d="M3 7a3 3 0 0 1 3-3h13v4H6a3 3 0 0 0 0 6h15v6H6a3 3 0 0 1-3-3Z" />
+        <path d="M16 12h.01" />
+      </svg>
+    ),
+    leaf: (
+      <svg {...common}>
+        <path d="M11 20A7 7 0 0 1 4 13c0-5 4-8 12-9 1 8-2 12-7 12" />
+        <path d="M5 19c4-6 8-8 13-10" />
+      </svg>
+    ),
+    file: (
+      <svg {...common}>
+        <path d="M14 3H6v18h12V7l-4-4Z" />
+        <path d="M14 3v4h4" />
+        <path d="M8 13h8" />
+        <path d="M8 17h6" />
+      </svg>
+    ),
+  };
+  return icons[name] || icons.box;
+}
+
+// Geçici ağ/başlangıç hatalarında kullanıcıya buton göstermeden kendiliğinden tekrar dene.
+async function withRetry(fn, tries = 3, delayMs = 1200) {
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (i === tries - 1) throw err;
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
+function pickRepresentative(menusForWeek) {
+  // Önce onaylı menü; onaylı yoksa en dolu (en çok kalemli) taslak; eşitse en yeni.
+  return [...menusForWeek].sort((a, b) => {
+    if (a.status !== b.status) return a.status === "approved" ? -1 : 1;
+    const ai = a.items?.length || 0;
+    const bi = b.items?.length || 0;
+    if (ai !== bi) return bi - ai;
+    return b.id - a.id;
+  })[0];
+}
+
+function dayStats(items, day) {
+  const dayItems = items.filter((it) => it.day_of_week === day);
+  let totalCost = 0;
+  let portions = null;
+  const mealNames = [];
+  dayItems.forEach((it) => {
+    if (it.portions) {
+      totalCost += (it.estimated_cost || 0) * it.portions;
+      portions = Math.max(portions || 0, it.portions);
+    } else {
+      totalCost += it.estimated_cost || 0;
+    }
+    if (!mealNames.includes(it.meal_name)) mealNames.push(it.meal_name);
+  });
+  const perPerson = portions ? totalCost / portions : null;
+  return { dayItems, mealNames, totalCost, portions, perPerson };
+}
+
+export default function Dashboard() {
+  const [stats, setStats] = useState(null);
+  const [statsError, setStatsError] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [menusDetailed, setMenusDetailed] = useState(null);
+  const [modalInfo, setModalInfo] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const scrollerRef = useRef(null);
+  const currentWeekRef = useRef(null);
+  const dragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0, moved: false });
+
+  const loadAll = () => {
+    setLoading(true);
+    setStatsError(false);
+    // Otomatik retry: ilk açılışta backend geç yanıt verirse buton beklemeden kendisi toparlar.
+    withRetry(() => getDashboardStats())
+      .then(setStats)
+      .catch(() => setStatsError(true))
+      .finally(() => setLoading(false));
+
+    withRetry(() => getMenus())
+      .then(async (list) => {
+        const results = await Promise.allSettled(list.map((m) => withRetry(() => getMenu(m.id), 2, 800)));
+        setMenusDetailed(results.filter((r) => r.status === "fulfilled").map((r) => r.value));
+      })
+      .catch(() => setMenusDetailed([]));
+  };
+
+  useEffect(() => { loadAll(); }, []);
+
+  const weekCards = useMemo(() => {
+    if (!menusDetailed) return [];
+    const byWeek = new Map();
+    menusDetailed.forEach((m) => {
+      // Aynı takvim haftasına (Pzt bazlı) düşen tüm menüler tek kartta birleşir —
+      // hafta ortası tarihle kaydedilmiş menüler ikinci bir "BU HAFTA" kartı üretemez.
+      const key = isoLocal(mondayOf(new Date(`${m.week_start_date}T00:00:00`)));
+      if (!byWeek.has(key)) byWeek.set(key, []);
+      byWeek.get(key).push(m);
+    });
+    const today = startOfDay(new Date());
+    return Array.from(byWeek.entries())
+      .map(([weekStartStr, menusForWeek]) => {
+        const menu = pickRepresentative(menusForWeek);
+        const weekStart = startOfDay(new Date(`${weekStartStr}T00:00:00`));
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        const isCurrent = today >= weekStart && today <= weekEnd;
+        const isPast = today > weekEnd;
+        return { menu, weekStart, weekEnd, isCurrent, isPast };
+      })
+      .sort((a, b) => a.weekStart - b.weekStart);
+  }, [menusDetailed]);
+
+  // Açılışta bu haftanın kartını görünür alanın ortasına al.
+  useEffect(() => {
+    if (!weekCards.length) return;
+    let frame = requestAnimationFrame(() => {
+      const card = currentWeekRef.current;
+      const sc = scrollerRef.current;
+      if (!card || !sc) return;
+      sc.scrollTo({
+        left: card.offsetLeft - (sc.clientWidth - card.clientWidth) / 2,
+        behavior: "auto",
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [weekCards.length]);
+
+  const handlePointerDown = (e) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    dragRef.current = { isDown: true, startX: e.pageX, scrollLeft: el.scrollLeft, moved: false };
+    setIsDragging(true);
+  };
+  const handlePointerMove = (e) => {
+    if (!dragRef.current.isDown) return;
+    const el = scrollerRef.current;
+    const dx = e.pageX - dragRef.current.startX;
+    if (Math.abs(dx) > 4) dragRef.current.moved = true;
+    el.scrollLeft = dragRef.current.scrollLeft - dx;
+  };
+  const endDrag = () => {
+    dragRef.current.isDown = false;
+    setIsDragging(false);
+  };
+
+  const openDayModal = (day, dayDate, dayItems) => {
+    if (dragRef.current.moved) return;
+    setModalInfo({ day, dayDate, dayItems });
+  };
+
+  if (loading) {
+    return (
+      <div className="dashboard-home" style={dashboardLoadingPage}>
+        <LoadingSpinner label="Kontrol paneli yükleniyor" minHeight="calc(100vh - 96px)" size={48} />
+      </div>
+    );
+  }
+  if (statsError || !stats) {
+    return (
+      <div style={{ padding: 32, color: "var(--red)" }}>
+        Veriler alınamadı.{" "}
+        <button onClick={loadAll} style={{ marginLeft: 8, background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text2)", padding: "4px 10px", borderRadius: 6, fontSize: 12, cursor: "pointer" }}>
+          Tekrar Dene
+        </button>
+      </div>
+    );
+  }
+
+  const statCards = [
+    { label: "Toplam Öğrenci",    value: stats.total_students,    color: "var(--accent)" },
+    { label: "Toplam Devamsızlık",value: stats.total_absences,    color: "var(--amber)" },
+    { label: "Malzeme Türü",      value: stats.total_ingredients, color: "var(--green)" },
+    { label: "Yemek Sayısı",      value: stats.total_meals,       color: "var(--purple)" },
+  ];
+
+  return (
+    <div className="dashboard-home" style={dashboardPage}>
+      <div style={pageHeader}>
+        <div>
+          <div style={eyebrow}>Operasyon Paneli</div>
+          <div style={pageTitle}>Genel Bakış</div>
+        </div>
+        <div style={pageSubtitle}>Haftalık menü ve stok özeti</div>
+      </div>
+
+      <div style={shortcutSection}>
+        <div style={shortcutHeader}>
+          <span>Operasyon Kısayolları</span>
+          <small style={shortcutHeaderHint}>Kaydırarak modüller arasında hızlı geçiş yapın</small>
+        </div>
+        <div className="no-scrollbar" style={shortcutRail}>
+          {operationShortcuts.map((item) => (
+            <Link key={item.to} to={item.to} style={shortcutCard}>
+              <span style={{ ...shortcutIcon, color: item.tone }}>
+                <ShortcutIcon name={item.icon} />
+              </span>
+              <span style={{ minWidth: 0 }}>
+                <strong style={shortcutLabel}>{item.label}</strong>
+                <small style={shortcutDetail}>{item.detail}</small>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
+        {statCards.map((c) => (
+          <div key={c.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "16px 18px", boxShadow: "var(--shadow)", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: c.color, borderRadius: "var(--radius) var(--radius) 0 0" }} />
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>{c.label}</div>
+            <div style={{ fontSize: 28, fontWeight: 600, fontFamily: "var(--mono)" }}>{c.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Haftalık Menü Takvimi</div>
+      {menusDetailed === null ? (
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", padding: 24, color: "var(--text3)", fontSize: 12, marginBottom: 24 }}>
+          <LoadingSpinner label="Haftalık menü yükleniyor" minHeight={140} size={38} />
+        </div>
+      ) : weekCards.length === 0 ? (
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", padding: 24, color: "var(--text3)", fontSize: 12, marginBottom: 24 }}>
+          Henüz oluşturulmuş haftalık menü yok. AI Destekli Menü Planlayıcı'dan bir hafta oluşturabilirsiniz.
+        </div>
+      ) : (
+        <div
+          ref={scrollerRef}
+          className="no-scrollbar"
+          onMouseDown={handlePointerDown}
+          onMouseMove={handlePointerMove}
+          onMouseUp={endDrag}
+          onMouseLeave={endDrag}
+          style={{
+            display: "flex", gap: 16, overflowX: "auto", marginBottom: 24,
+            padding: "18px max(16px, calc((100% - 980px) / 2)) 10px",
+            cursor: isDragging ? "grabbing" : "grab",
+            userSelect: isDragging ? "none" : "auto",
+            scrollSnapType: isDragging ? "none" : "x proximity",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
+        >
+          {weekCards.map(({ menu, weekStart, weekEnd, isCurrent, isPast }) => {
+            const today = startOfDay(new Date());
+            return (
+              <div
+                key={menu.id}
+                ref={isCurrent ? currentWeekRef : null}
+                style={{
+                  flex: "0 0 auto",
+                  scrollSnapAlign: "center",
+                  background: isCurrent ? "var(--accent-bg)" : "var(--surface)",
+                  border: isCurrent ? "2px solid var(--accent)" : "1px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                  boxShadow: isCurrent ? "0 8px 24px rgba(37,99,235,.20)" : "var(--shadow)",
+                  padding: "14px 16px 16px",
+                  position: "relative",
+                  opacity: isPast && !isCurrent ? 0.75 : 1,
+                }}
+              >
+                {isCurrent && (
+                  <div style={{
+                    position: "absolute", top: -11, left: 14, fontSize: 9, fontWeight: 700,
+                    background: "var(--accent)", color: "#fff", padding: "2px 8px", borderRadius: 999,
+                    letterSpacing: ".04em", boxShadow: "0 2px 6px rgba(37,99,235,.35)",
+                  }}>
+                    BU HAFTA
+                  </div>
+                )}
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10, marginTop: isCurrent ? 4 : 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: isCurrent ? "var(--accent)" : "var(--text)" }}>
+                    {formatShort(weekStart)} – {formatShort(weekEnd)}
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--text3)" }}>
+                    {menu.status === "approved" ? "Onaylandı" : "Taslak"} · Bütçe {menu.budget.toFixed(0)} TL
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 130px)", gap: 8 }}>
+                  {ALL_DAYS.map((day, idx) => {
+                    const dayDate = new Date(weekStart);
+                    dayDate.setDate(dayDate.getDate() + idx);
+                    const isToday = sameDay(dayDate, today);
+                    const { dayItems, mealNames, totalCost, portions, perPerson } = dayStats(menu.items, day);
+                    return (
+                      <div
+                        key={day}
+                        onClick={() => openDayModal(day, dayDate, dayItems)}
+                        style={{
+                          border: isToday ? "2px solid var(--green)" : "1px solid var(--border2)",
+                          boxShadow: isToday ? "0 0 0 3px rgba(34,197,94,.15)" : "none",
+                          borderRadius: 8,
+                          background: "var(--surface2)",
+                          display: "flex",
+                          flexDirection: "column",
+                          minHeight: 150,
+                          cursor: dayItems.length ? "pointer" : "default",
+                        }}
+                      >
+                        <div style={{
+                          padding: "6px 8px", fontSize: 10, fontWeight: 700,
+                          color: isToday ? "var(--green)" : "var(--text2)",
+                          borderBottom: "1px solid var(--border2)",
+                          display: "flex", justifyContent: "space-between",
+                        }}>
+                          <span>{ALL_DAYS_SHORT[idx]}</span>
+                          <span style={{ fontWeight: 500, color: "var(--text3)" }}>{String(dayDate.getDate()).padStart(2, "0")}.{String(dayDate.getMonth() + 1).padStart(2, "0")}</span>
+                        </div>
+                        <div style={{ padding: "6px 8px", flex: 1 }}>
+                          {mealNames.length === 0 ? (
+                            <div style={{ fontSize: 10, color: "var(--text3)" }}>—</div>
+                          ) : (
+                            <ul style={{ margin: 0, paddingLeft: 14, fontSize: 10, color: "var(--text2)" }}>
+                              {mealNames.map((name) => (
+                                <li key={name} style={{ marginBottom: 3 }}>{name}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                        <div style={{ padding: "6px 8px", borderTop: "1px solid var(--border2)", fontSize: 9, color: "var(--text3)", display: "grid", gap: 2 }}>
+                          <div>{portions ?? "—"} kişi</div>
+                          <div>{totalCost.toFixed(0)} TL</div>
+                          <div>{perPerson !== null ? `${perPerson.toFixed(2)} TL/kişi` : "—"}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {stats.low_stock_ingredients.length > 0 && (
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)" }}>
+          <div style={{ padding: "14px 18px 12px", borderBottom: "1px solid var(--border)", fontSize: 13, fontWeight: 600 }}>
+            Düşük Stok Uyarısı
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                {["Malzeme", "Birim", "Stok", "Kalori"].map((h) => (
+                  <th key={h} style={th}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {stats.low_stock_ingredients.map((ing) => (
+                <tr key={ing.id}>
+                  <td style={{ ...td, fontWeight: 500, color: "var(--text)" }}>{ing.name}</td>
+                  <td style={td}>{ing.unit}</td>
+                  <td style={{ ...td, fontFamily: "var(--mono)", color: "var(--red)", fontWeight: 600 }}>{ing.stock}</td>
+                  <td style={td}>{ing.calories} kcal</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {modalInfo && (
+        <div onClick={() => setModalInfo(null)} style={overlayStyle}>
+          <div onClick={(e) => e.stopPropagation()} style={modalStyle}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{modalInfo.day} · {formatShort(modalInfo.dayDate)}</div>
+              <button onClick={() => setModalInfo(null)} style={{ background: "none", border: "none", color: "var(--text3)", fontSize: 12, cursor: "pointer" }}>Kapat</button>
+            </div>
+            {modalInfo.dayItems.length === 0 ? (
+              <div style={{ fontSize: 12, color: "var(--text3)" }}>Bu gün için planlanmış yemek yok.</div>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>{["Yemek", "Kategori", "Kaç Porsiyon", "Toplam Maliyet"].map((h) => <th key={h} style={thModal}>{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {modalInfo.dayItems.map((it) => {
+                    const total = it.portions ? (it.estimated_cost || 0) * it.portions : (it.estimated_cost || 0);
+                    return (
+                      <tr key={it.id}>
+                        <td style={tdModal}><span style={{ fontWeight: 600, color: "var(--text)" }}>{it.meal_name}</span></td>
+                        <td style={tdModal}>{it.category || "—"}</td>
+                        <td style={tdModal}>{it.portions ? `${it.portions} porsiyon` : (it.quantity ? `${it.quantity} ${it.unit || ""}` : "—")}</td>
+                        <td style={{ ...tdModal, fontFamily: "var(--mono)", fontWeight: 600 }}>
+                          {total.toFixed(2)} TL
+                          {it.portions ? <span style={{ color: "var(--text3)", fontWeight: 400 }}> ({(it.estimated_cost || 0).toFixed(2)} TL/porsiyon)</span> : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const dashboardPage = {
+  minHeight: "calc(100vh - 48px)",
+  margin: -24,
+  padding: 24,
+  background: "var(--dashboard-bg)",
+};
+
+const dashboardLoadingPage = {
+  ...dashboardPage,
+  display: "grid",
+  placeItems: "center",
+};
+
+const pageHeader = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "end",
+  gap: 16,
+  marginBottom: 20,
+};
+const eyebrow = {
+  color: "var(--ingredients-accent)",
+  fontSize: 11,
+  fontWeight: 900,
+  letterSpacing: ".08em",
+  textTransform: "uppercase",
+  marginBottom: 4,
+};
+const pageTitle = {
+  color: "var(--ingredients-text)",
+  fontFamily: "Georgia, 'Times New Roman', serif",
+  fontSize: 30,
+  lineHeight: 1.05,
+  fontWeight: 700,
+};
+const pageSubtitle = {
+  color: "var(--ingredients-muted)",
+  fontSize: 13,
+  fontWeight: 700,
+  paddingBottom: 3,
+};
+
+const shortcutSection = {
+  marginBottom: 22,
+};
+
+const shortcutHeader = {
+  display: "flex",
+  alignItems: "baseline",
+  justifyContent: "space-between",
+  gap: 12,
+  marginBottom: 10,
+  color: "var(--text)",
+  fontSize: 13,
+  fontWeight: 700,
+};
+
+const shortcutHeaderHint = {
+  color: "var(--text3)",
+  fontSize: 11,
+  fontWeight: 600,
+};
+
+const shortcutRail = {
+  display: "flex",
+  gap: 12,
+  overflowX: "auto",
+  padding: "2px 2px 8px",
+  scrollSnapType: "x proximity",
+  scrollbarWidth: "none",
+  msOverflowStyle: "none",
+};
+
+const shortcutCard = {
+  flex: "0 0 218px",
+  minHeight: 76,
+  scrollSnapAlign: "start",
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  padding: "13px 14px",
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius)",
+  boxShadow: "var(--shadow)",
+  textDecoration: "none",
+  color: "var(--text)",
+};
+
+const shortcutIcon = {
+  width: 38,
+  height: 38,
+  borderRadius: 8,
+  display: "inline-grid",
+  placeItems: "center",
+  flexShrink: 0,
+  border: "1px solid var(--border2)",
+};
+
+const shortcutLabel = {
+  display: "block",
+  fontSize: 13,
+  lineHeight: 1.15,
+  color: "var(--text)",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const shortcutDetail = {
+  display: "block",
+  marginTop: 4,
+  fontSize: 11,
+  lineHeight: 1.2,
+  color: "var(--text3)",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const th = { textAlign: "left", fontSize: 10, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", padding: "10px 18px", borderBottom: "1px solid var(--border)" };
+const td = { padding: "10px 18px", fontSize: 12, color: "var(--text2)", borderBottom: "1px solid var(--border)" };
+const thModal = { textAlign: "left", fontSize: 9, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".05em", padding: "6px 10px", borderBottom: "1px solid var(--border)" };
+const tdModal = { padding: "8px 10px", fontSize: 12, color: "var(--text2)", borderBottom: "1px solid var(--border)" };
+
+const overlayStyle = {
+  position: "fixed", inset: 0, background: "rgba(15,23,42,.45)",
+  display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50,
+};
+const modalStyle = {
+  background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+  boxShadow: "0 20px 60px rgba(0,0,0,.35)", padding: 20, width: "min(560px, 90vw)", maxHeight: "80vh", overflowY: "auto",
+};
