@@ -34,7 +34,7 @@
 | **Web Uygulaması** | [mertucan/YZTA-Team1](https://github.com/mertucan/YZTA-Team1) |
 | **Mobil Uygulama** | [sudenazkalaycik/YZA-Team1-TabloDot](https://github.com/sudenazkalaycik/YZA-Team1-TabloDot) |
 
-> Web ve mobil geliştirme süreçleri ayrı GitHub repoları üzerinden yürütülmektedir.
+> Web ve mobil geliştirme süreçleri ayrı GitHub repoları üzerinden yürütülmüştür.
 
 ---
 
@@ -279,11 +279,12 @@ Toplam proje kapsamı **250 Story Point** olarak planlanmıştır. Sprint 1'de t
   <img src="bootcampFiles/sprintTwo/BoardUpdate/9.png" alt="Sprint 2 Trello Board">
 </a>
 
-🔗 **[Sprint 3 Trello Board](https://trello.com/invite/b/6a5ccab705cc382bde8836ff/ATTIb9f4fba77c59dd705f8074d726b50ea5ED40CEC3/bootcamp-3st-sprint)**
+🔗 **[Sprint 3 Trello Board](https://trello.com/invite/b/6a5ccab705cc382bde8836ff/ATTI419394473d4451ceb0a807d70ee7f40dCD146952/bootcamp-3st-sprint)**
 
-<a href="bootcampFiles/sprintTwo/BoardUpdate/9.png" target="_blank">
+<a href="bootcampFiles/sprintThree/BoardUpdate/10.png" target="_blank">
   <img src="bootcampFiles/sprintThree/BoardUpdate/10.png" alt="Sprint 3 Trello Board">
 </a>
+
 
 ---
 
