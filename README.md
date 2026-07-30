@@ -38,6 +38,16 @@
 
 ---
 
+# 🏗️ Proje Mimarisi
+
+TabloDot; kullanıcı rolleri, web yönetim paneli, öğrenci mobil uygulaması, kimlik doğrulama, FastAPI backend, yapay zeka motoru, PostgreSQL veritabanı ve dış entegrasyonlardan oluşan katmanlı bir mimariyle tasarlanmıştır.
+
+<a href="bootcampFiles/docs/architecture/architecture.jpeg" target="_blank">
+  <img src="bootcampFiles/docs/architecture/architecture.jpeg" alt="TabloDot Enterprise System Architecture">
+</a>
+
+---
+
 # 🚀 Projeyi Çalıştırma
 
 Bu repo içerisinde web ve mobil uygulama kodları ayrı klasörler altında yer almaktadır.
@@ -267,6 +277,12 @@ Toplam proje kapsamı **250 Story Point** olarak planlanmıştır. Sprint 1'de t
 
 <a href="bootcampFiles/sprintTwo/BoardUpdate/9.png" target="_blank">
   <img src="bootcampFiles/sprintTwo/BoardUpdate/9.png" alt="Sprint 2 Trello Board">
+</a>
+
+🔗 **[Sprint 3 Trello Board](https://trello.com/invite/b/6a5ccab705cc382bde8836ff/ATTIb9f4fba77c59dd705f8074d726b50ea5ED40CEC3/bootcamp-3st-sprint)**
+
+<a href="bootcampFiles/sprintTwo/BoardUpdate/9.png" target="_blank">
+  <img src="bootcampFiles/sprintThree/BoardUpdate/10.png" alt="Sprint 3 Trello Board">
 </a>
 
 ---
