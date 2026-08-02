@@ -38,6 +38,18 @@
 
 ---
 
+# 🎥 Ürün Tanıtım Videosu
+
+> TabloDot'un temel özelliklerini ve kullanım senaryolarını aşağıdaki videodan izleyebilirsiniz.
+
+<p align="center">
+  <a href="https://youtu.be/FoJmtDB-ac8">
+    <img src="https://img.youtube.com/vi/FoJmtDB-ac8/hqdefault.jpg" alt="TabloDot Demo Video">
+  </a>
+</p>
+
+---
+
 # 🏗️ Proje Mimarisi
 
 TabloDot; kullanıcı rolleri, web yönetim paneli, öğrenci mobil uygulaması, kimlik doğrulama, FastAPI backend, yapay zeka motoru, PostgreSQL veritabanı ve dış entegrasyonlardan oluşan katmanlı bir mimariyle tasarlanmıştır.
