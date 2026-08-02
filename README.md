@@ -38,7 +38,7 @@
 
 ---
 
-# 🎥 Ürün Tanıtım Videosu
+# 🎥 Demo Videosu
 
 > TabloDot'un temel özelliklerini ve kullanım senaryolarını aşağıdaki videodan izleyebilirsiniz.
 
